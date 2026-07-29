@@ -45,6 +45,7 @@ public:
     // unavailable; the caller can continue without sound.
     bool init();
     void shutdown();
+    bool isAvailable() const { return m_device != 0; }
 
     // Queues a short sine-wave beep at the given frequency/duration. Safe to
     // call even if init() failed or was never called (silent no-op).

@@ -21,8 +21,14 @@ add_executable(minicar
     src/actor/StartLine.cpp
     src/input/KeyboardInput.cpp
     src/input/AiInput.cpp
+    src/audio/Announcer.cpp
     src/game/Game.cpp
+    src/game/DriverAssignmentService.cpp
     src/game/GamePhases.cpp
+    src/game/RaceBuilder.cpp
+    src/game/RaceSession.cpp
+    src/game/WorldRenderer.cpp
+    src/game/HudRenderer.cpp
 )
 
 target_include_directories(minicar PRIVATE

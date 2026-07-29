@@ -24,7 +24,7 @@ void CountdownState::update(Game& game, float dt) {
     game.countdownTimer = std::max(0.0f, game.countdownTimer - dt);
 
     // Engines idle silently -- no way to jump the start.
-    for (size_t i = 0; i < game.cars.size(); ++i) {
+    for (size_t i = 0; i < game.race().cars().size(); ++i) {
         game.engineSound.setCarSpeed(static_cast<int>(i), 0.0f);
     }
 
@@ -44,15 +44,9 @@ void CountdownState::update(Game& game, float dt) {
         };
         game.countdownLastDigit = digit;
 
-        // Audible cue: spoken via espeak-ng when available, otherwise a plain
-        // beep for 3/2/1 and a higher, longer beep for 0 (the "go" moment).
-        if (game.voiceAvailable) {
-            game.voice.speak(digit > 0 ? std::to_string(digit) : std::string("Go"));
-        } else if (digit > 0) {
-            game.uiSound.playBeep(440.0f, 0.15f);
-        } else {
-            game.uiSound.playBeep(880.0f, 0.3f);
-        }
+        // Audible cue delegated to the pre-selected Announcer strategy
+        // (VoiceAnnouncer / BeepAnnouncer / SilentAnnouncer null-object).
+        if (game.announcer) game.announcer->countdown(digit);
     }
 
     // Keep lap textures live so the leaderboard shows on the first frame.
@@ -80,47 +74,12 @@ void CountdownState::renderOverlay(Game& game) {
 // ==========================================================================
 
 void RacingState::update(Game& game, float dt) {
-    for (auto& gate : game.gates) gate.update(dt);
-
-    // Rebuild the list of s positions AI cars should slow down for
-    // (only currently-closed gates block the track).
-    std::vector<float> blockedS;
-    for (const auto& gate : game.gates) {
-        if (gate.isClosed()) blockedS.push_back(gate.s);
-    }
-
     const Uint8* keys = SDL_GetKeyboardState(nullptr);
-    CarControls ctrl;
-    ctrl.keys = keys;
-    ctrl.maxSpeed = Game::kMaxCarSpeed;
-    ctrl.playerAccel = Game::kPlayerAccel;
-    ctrl.playerBrake = Game::kPlayerBrake;
-    ctrl.playerSteerRate = Game::kPlayerSteerRate;
-    ctrl.laneLimit = Game::kLaneLimit;
-    ctrl.aiAccel = Game::kAiAccel;
-    ctrl.recoveryBoost = Game::kRecoveryBoost;
-    ctrl.blockedSPositions = &blockedS;
-    ctrl.track = game.track.get();
-
-    const float totalLength = game.track->totalLength();
-    for (size_t i = 0; i < game.cars.size(); ++i) {
-        Car& car = game.cars[i];
-        car.update(dt, game.cars, i, totalLength, ctrl);
-        game.engineSound.setCarSpeed(static_cast<int>(i), car.speed / Game::kMaxCarSpeed);
-
-        if (car.laps >= Game::kLapsToWin && game.winnerIndex < 0) {
-            game.winnerIndex = static_cast<int>(i);
-        }
-    }
-
-    CollisionSystem::Config cfg{ totalLength,
-                                  static_cast<float>(Game::kCarHeight),
-                                  static_cast<float>(Game::kCarWidth) };
-    CollisionSystem::resolveAll(game.cars, game.rocks, game.gates, cfg);
-
+    game.race().update(dt, keys);
+    game.synchronizeEngineSound();
     game.refreshLapTextures();
 
-    if (game.winnerIndex >= 0) {
+    if (game.race().winnerIndex()) {
         game.transitionTo(std::make_unique<FinishedState>());
     }
 }
@@ -130,10 +89,12 @@ void RacingState::update(Game& game, float dt) {
 // ==========================================================================
 
 void FinishedState::onEnter(Game& game) {
-    if (game.winnerIndex < 0) return;
-    std::string winMsg = std::string(game.cars[game.winnerIndex].getName()) + " wins the race!";
+    const auto& winnerIndex = game.race().winnerIndex();
+    if (!winnerIndex) return;
+    const auto& cars = game.race().cars();
+    std::string winMsg = std::string(cars[*winnerIndex].getName()) + " wins the race!";
     game.winnerTexture = game.makeLabelTexture(winMsg.c_str(),
-                                                game.cars[game.winnerIndex].getColor(),
+                                                cars[*winnerIndex].getColor(),
                                                 game.winnerRect);
     game.winnerRect.x = (game.windowWidth - game.winnerRect.w) / 2;
     game.winnerRect.y = (game.windowHeight - game.winnerRect.h) / 2;
@@ -146,7 +107,7 @@ void FinishedState::onEnter(Game& game) {
 }
 
 void FinishedState::update(Game& game, float /*dt*/) {
-    for (size_t i = 0; i < game.cars.size(); ++i) {
+    for (size_t i = 0; i < game.race().cars().size(); ++i) {
         game.engineSound.setCarSpeed(static_cast<int>(i), 0.0f);
     }
     game.refreshLapTextures();

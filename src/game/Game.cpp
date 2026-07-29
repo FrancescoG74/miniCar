@@ -6,24 +6,9 @@
 #include <iostream>
 #include <string>
 
-#include "CollisionSystem.h"
 #include "game/GamePhases.h"
 #include "game/GameState.h"
-
-namespace {
-
-void drawCircle(SDL_Renderer* renderer, float cx, float cy, float radius, SDL_Color color) {
-    constexpr int kPoints = 24;
-    SDL_FPoint points[kPoints + 1];
-    for (int i = 0; i <= kPoints; ++i) {
-        float t = static_cast<float>(i) / kPoints * 2.0f * static_cast<float>(M_PI);
-        points[i] = { cx + radius * std::cos(t), cy + radius * std::sin(t) };
-    }
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-    SDL_RenderDrawLinesF(renderer, points, kPoints + 1);
-}
-
-} // namespace
+#include "game/WorldRenderer.h"
 
 Game::Game() = default;
 Game::~Game() = default;
@@ -38,10 +23,16 @@ bool Game::init(int width, int height, const char* title) {
                                      kTrackStraight, kTrackRadius, kTrackWidth);
     startLine = std::make_unique<StartLine>(*track, kTrackWidth);
     carTexture = Car::createTexture(app.renderer, kCarWidth, kCarHeight);
+    m_raceTuning.laneLimit = kTrackWidth / 2.0f - 12.0f;
+    m_raceTuning.carLength = static_cast<float>(kCarHeight);
+    m_raceTuning.carWidth = static_cast<float>(kCarWidth);
+    m_aiTuning.homeLaneOffset = 25.0f;
+    m_race = std::make_unique<RaceSession>(*track, kTrackWidth, m_raceTuning, m_aiTuning);
 
     engineSound.init(); // silent no-op on failure
     uiSound.init();
     voiceAvailable = voice.init();
+    announcer = Announcer::create(&voice, &uiSound, voiceAvailable);
 
     resetRace();
     return true;
@@ -81,26 +72,21 @@ void Game::resetRace() {
     // Wipe any HUD textures that reference the previous race.
     player1LabelTexture.reset();
     player2LabelTexture.reset();
-    for (auto& tex : carLapTextures) tex.reset();
+    carHud.clear();
     winnerTexture.reset();
     winnerHintTexture.reset();
     countdownTexture.reset();
 
-    cars = Car::createInitialGrid(kLaneOffset);
-    rocks = Rock::createInitialRocks(*track);
-    gates = Gate::createInitialGates(*track, kTrackWidth);
-
-    player1Index = Car::assignPlayer1(cars, app.window);
-    player2Index = -1;
+    m_race->reset();
+    const auto player1Index = *m_race->player1Index();
+    std::cout << "Player 1 controls the " << m_race->cars()[player1Index].getName() << " car (W/A/S/D).\n"
+              << "Press '2' to add Player 2, '1' to remove them." << std::endl;
+    updateWindowTitle();
 
     rebuildPlayerLabels();
 
-    carLapTextures.clear();
-    carLapTextures.resize(cars.size());
-    carLapRects.assign(cars.size(), SDL_Rect{ 0, 0, 0, 0 });
-    carLastLaps.assign(cars.size(), -1);
+    carHud.resize(m_race->cars().size());
 
-    winnerIndex = -1;
     winnerRect = SDL_Rect{ 0, 0, 0, 0 };
     winnerHintRect = SDL_Rect{ 0, 0, 0, 0 };
 
@@ -119,16 +105,16 @@ void Game::resetRace() {
 
 void Game::rebuildPlayerLabels() {
     player1LabelRect = SDL_Rect{ 20, 20, 0, 0 };
-    if (player1Index >= 0) {
+    if (const auto& player1Index = m_race->player1Index()) {
         player1LabelTexture = makeLabelTexture("Player 1",
-                                                cars[player1Index].getColor(), player1LabelRect);
+                                                m_race->cars()[*player1Index].getColor(), player1LabelRect);
     } else {
         player1LabelTexture.reset();
     }
     player2LabelRect = SDL_Rect{ 20, player1LabelRect.y + player1LabelRect.h + 14, 0, 0 };
-    if (player2Index >= 0) {
+    if (const auto& player2Index = m_race->player2Index()) {
         player2LabelTexture = makeLabelTexture("Player 2",
-                                                cars[player2Index].getColor(), player2LabelRect);
+                                                m_race->cars()[*player2Index].getColor(), player2LabelRect);
         player2LabelRect.y = player1LabelRect.y + player1LabelRect.h + 14;
     } else {
         player2LabelTexture.reset();
@@ -136,12 +122,13 @@ void Game::rebuildPlayerLabels() {
 }
 
 void Game::refreshLapTextures() {
+    const auto& cars = m_race->cars();
     for (size_t i = 0; i < cars.size(); ++i) {
-        if (cars[i].laps == carLastLaps[i]) continue;
+        if (cars[i].laps == carHud[i].lastLaps) continue;
         std::string text = std::string(cars[i].getName()) + ": Lap " +
                             std::to_string(cars[i].laps);
-        carLapTextures[i] = makeLabelTexture(text.c_str(), cars[i].getColor(), carLapRects[i]);
-        carLastLaps[i] = cars[i].laps;
+        carHud[i].texture = makeLabelTexture(text.c_str(), cars[i].getColor(), carHud[i].rect);
+        carHud[i].lastLaps = cars[i].laps;
     }
 }
 
@@ -179,24 +166,27 @@ void Game::pollEvents() {
                 continue;
             }
 
-            // Player 2 join/leave is only meaningful mid-race (not when finished).
-            const bool finished = dynamic_cast<FinishedState*>(m_state.get()) != nullptr;
-            if (k == SDLK_2 && player2Index < 0 && !finished) {
-                int newP2 = Car::assignPlayer2(cars, app.window, player1Index);
-                if (newP2 >= 0) {
-                    player2Index = newP2;
+            if (k == SDLK_2 && !m_race->player2Index()) {
+                auto newP2 = m_race->joinPlayer2();
+                if (newP2) {
+                    std::cout << "Player 2 joined: controls the "
+                              << m_race->cars()[*newP2].getName() << " car (I/J/K/L)." << std::endl;
+                    updateWindowTitle();
                     rebuildPlayerLabels();
-                    carLastLaps[player2Index] = -1; // driver color changed; rebuild HUD row
+                    carHud[*newP2].lastLaps = -1; // driver color changed; rebuild HUD row
                 }
                 continue;
             }
-            if (k == SDLK_1 && player2Index >= 0 && !finished) {
-                Car::removePlayer2(cars, app.window, player1Index, player2Index);
-                int oldP2 = player2Index;
-                player2Index = -1;
-                rebuildPlayerLabels();
-                if (oldP2 >= 0 && oldP2 < static_cast<int>(carLastLaps.size())) {
-                    carLastLaps[oldP2] = -1;
+            if (k == SDLK_1 && m_race->player2Index()) {
+                const std::size_t oldP2 = *m_race->player2Index();
+                if (m_race->removePlayer2()) {
+                    std::cout << "Player 2 left; " << m_race->cars()[oldP2].getName()
+                              << " car returns to AI control." << std::endl;
+                    updateWindowTitle();
+                    rebuildPlayerLabels();
+                    if (oldP2 < carHud.size()) {
+                        carHud[oldP2].lastLaps = -1;
+                    }
                 }
                 continue;
             }
@@ -215,90 +205,42 @@ void Game::renderFrame() {
     SDL_SetRenderDrawColor(renderer, 34, 120, 50, 255);
     SDL_RenderClear(renderer);
 
-    renderWorld();
+    WorldRenderer::CarSprite carSprite{ carTexture.get(), kCarWidth, kCarHeight };
+    WorldRenderer::render(renderer, *track, *startLine, *m_race, carSprite);
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    renderPlayerLabels();
-    renderLeaderboard();
+    HudRenderer::renderLabel(renderer, player1LabelTexture.get(), player1LabelRect);
+    HudRenderer::renderLabel(renderer, player2LabelTexture.get(), player2LabelRect);
+    HudRenderer::renderLeaderboard(renderer, windowWidth, m_race->cars(), carHud);
 
     if (m_state) m_state->renderOverlay(*this);
 
     SDL_RenderPresent(renderer);
 }
 
-void Game::renderWorld() {
-    SDL_Renderer* renderer = app.renderer;
-    track->render(renderer);
-    startLine->render(renderer);
-
-    for (const auto& rock : rocks) rock.render(renderer);
-    for (const auto& gate : gates) gate.render(renderer);
-
-    for (const auto& car : cars) {
-        TrackPoint p = track->sample(car.s); // sampled once for the rotation angle
-        float cx = car.getPosition().x;
-        float cy = car.getPosition().y;
-
-        SDL_SetTextureColorMod(carTexture.get(), car.getColor().r, car.getColor().g, car.getColor().b);
-        SDL_Rect dst{
-            static_cast<int>(cx - kCarWidth / 2.0f),
-            static_cast<int>(cy - kCarHeight / 2.0f),
-            kCarWidth,
-            kCarHeight
-        };
-        double angleDeg = p.angle * 180.0 / M_PI + 90.0;
-        SDL_RenderCopyEx(renderer, carTexture.get(), nullptr, &dst, angleDeg, nullptr, SDL_FLIP_NONE);
-
-        if (car.playerNumber != 0) {
-            drawCircle(renderer, cx, cy, kCarHeight * 0.75f, SDL_Color{ 255, 255, 255, 255 });
-        }
+void Game::synchronizeEngineSound() {
+    const auto& cars = m_race->cars();
+    for (std::size_t index = 0; index < cars.size(); ++index) {
+        engineSound.setCarSpeed(static_cast<int>(index),
+                                cars[index].speed / m_race->tuning().maxCarSpeed);
     }
 }
 
-void Game::renderPlayerLabels() {
-    SDL_Renderer* renderer = app.renderer;
-    if (player1LabelTexture) {
-        SDL_Rect background{
-            player1LabelRect.x - 8, player1LabelRect.y - 6,
-            player1LabelRect.w + 16, player1LabelRect.h + 12
-        };
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
-        SDL_RenderFillRect(renderer, &background);
-        SDL_RenderCopy(renderer, player1LabelTexture.get(), nullptr, &player1LabelRect);
-    }
-    if (player2LabelTexture) {
-        SDL_Rect background{
-            player2LabelRect.x - 8, player2LabelRect.y - 6,
-            player2LabelRect.w + 16, player2LabelRect.h + 12
-        };
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
-        SDL_RenderFillRect(renderer, &background);
-        SDL_RenderCopy(renderer, player2LabelTexture.get(), nullptr, &player2LabelRect);
-    }
-}
+void Game::updateWindowTitle() {
+    const auto& cars = m_race->cars();
+    const auto& player1Index = m_race->player1Index();
+    const auto& player2Index = m_race->player2Index();
+    if (!app.window || !player1Index) return;
 
-void Game::renderLeaderboard() {
-    SDL_Renderer* renderer = app.renderer;
-
-    // Sort by lap count (then distance) so the current leader is on top.
-    std::vector<size_t> order(cars.size());
-    for (size_t i = 0; i < order.size(); ++i) order[i] = i;
-    std::sort(order.begin(), order.end(), [&](size_t a, size_t b) {
-        if (cars[a].laps != cars[b].laps) return cars[a].laps > cars[b].laps;
-        return cars[a].distanceTraveled > cars[b].distanceTraveled;
-    });
-
-    int rowY = 20;
-    for (size_t idx : order) {
-        SDL_Texture* tex = carLapTextures[idx].get();
-        if (!tex) continue;
-        SDL_Rect& r = carLapRects[idx];
-        r.x = windowWidth - 20 - r.w;
-        r.y = rowY;
-        SDL_Rect background{ r.x - 8, r.y - 4, r.w + 16, r.h + 8 };
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
-        SDL_RenderFillRect(renderer, &background);
-        SDL_RenderCopy(renderer, tex, nullptr, &r);
-        rowY += r.h + 8;
+    std::string title = "miniCar - P1: ";
+    title += cars[*player1Index].getName();
+    title += " (WASD)";
+    if (player2Index) {
+        title += "  |  P2: ";
+        title += cars[*player2Index].getName();
+        title += " (IJKL)";
+    } else {
+        title += "  |  press 2 to add P2";
     }
+    SDL_SetWindowTitle(app.window, title.c_str());
 }

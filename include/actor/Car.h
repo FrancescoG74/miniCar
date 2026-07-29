@@ -9,6 +9,15 @@
 
 class InputController;
 class Track;
+struct AiTuning;
+
+// The authoritative identity of the current driver. Car uses it to choose and
+// own its InputController; callers must not manage controllers directly.
+enum class DriverKind {
+    Ai,
+    Player1,
+    Player2,
+};
 
 // Bundles the tunable physics/input parameters shared by every car so the per-frame
 // Car::update() call site stays compact.
@@ -30,6 +39,9 @@ struct CarControls {
     // Track used to refresh Actor::position (world-space) each frame. Optional;
     // if null, Car::update leaves position unchanged.
     const Track* track = nullptr;
+
+    // Immutable AI behavior values; only consumed by AiInput.
+    const AiTuning* aiTuning = nullptr;
 };
 
 class Car : public Actor {
@@ -43,7 +55,6 @@ public:
     float laneOffset = 0.0f;     // perpendicular offset from centerline (lane position)
     float targetLaneOffset = 0.0f; // AI-only: lane the car is currently steering toward
     float speed = 0.0f;          // pixels per second
-    int playerNumber = 0;        // 0 = AI, 1 = player 1 (WASD), 2 = player 2 (IJKL)
     float distanceTraveled = 0.0f; // cumulative distance since race start (never wraps)
     int laps = 0;
     float targetSpeed = 0.0f;    // cruising speed AI cars accelerate back to after a collision
@@ -52,10 +63,6 @@ public:
     // spawn staggered behind s = 0, so their first crossing just brings them up to
     // the line (race start) and must not itself be counted as a completed lap.
     bool hasStarted = false;
-
-    // Per-car input strategy. Cars default to `AiInput` at construction; player
-    // assignment swaps in a `KeyboardInput` bound to WASD or IJKL.
-    std::unique_ptr<InputController> input;
 
     Car();
     Car(float s, float laneOffset, float speed, SDL_Color color,
@@ -74,28 +81,20 @@ public:
     void update(float dt, const std::vector<Car>& allCars, size_t selfIndex,
                  float totalLength, const CarControls& ctrl);
 
+    DriverKind driver() const { return m_driver; }
+    void setDriver(DriverKind driver);
+
     // -- Static helpers for the whole race --------------------------------------
 
     // Builds the fixed race grid (10 cars, five staggered rows of two lanes).
     static std::vector<Car> createInitialGrid(float laneOffset);
 
-    // Picks a random car, marks it as player 1, prints the assignment and (if
-    // non-null) refreshes the window title. Returns the chosen index.
-    static int assignPlayer1(std::vector<Car>& cars, SDL_Window* window);
-
-    // Picks a random AI car (not equal to player1Index), marks it as player 2 and
-    // refreshes the window title. Returns the new player 2 index, or -1 if no AI
-    // car is available.
-    static int assignPlayer2(std::vector<Car>& cars, SDL_Window* window,
-                                int player1Index);
-
-    // Turns the car at `player2Index` back into an AI car and refreshes the window
-    // title to show only player 1.
-    static void removePlayer2(std::vector<Car>& cars, SDL_Window* window,
-                                int player1Index, int player2Index);
-
     // Creates a simple white "car" sprite texture the caller can tint per-car.
     // Returned as an owning SDL_TexturePtr so the caller doesn't have to
     // remember SDL_DestroyTexture.
     static SDL_TexturePtr createTexture(SDL_Renderer* renderer, int width, int height);
+
+private:
+    DriverKind m_driver = DriverKind::Ai;
+    std::unique_ptr<InputController> m_input;
 };

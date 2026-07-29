@@ -10,9 +10,10 @@
 #include "Track.h"
 #include "Voice.h"
 #include "actor/Car.h"
-#include "actor/Gate.h"
-#include "actor/Rock.h"
 #include "actor/StartLine.h"
+#include "audio/Announcer.h"
+#include "game/HudRenderer.h"
+#include "game/RaceSession.h"
 
 class GameState;
 
@@ -30,21 +31,10 @@ public:
     static constexpr float kTrackStraight = 500.0f;
     static constexpr float kTrackRadius = 190.0f;
     static constexpr float kTrackWidth = 130.0f;
-    static constexpr float kLaneOffset = 25.0f;
-
     static constexpr int kCarWidth = 16;
     static constexpr int kCarHeight = 30;
 
-    static constexpr float kMaxCarSpeed = 130.0f;
-    static constexpr float kPlayerAccel = 60.0f;
-    static constexpr float kPlayerBrake = 90.0f;
-    static constexpr float kPlayerSteerRate = 70.0f;
-    static constexpr float kAiAccel = 50.0f;
-    static constexpr float kRecoveryBoost = 2.5f;
-    static constexpr float kLaneLimit = kTrackWidth / 2.0f - 12.0f;
-
     static constexpr float kCountdownDuration = 4.0f;
-    static constexpr int kLapsToWin = 5;
 
     // -- Lifecycle ---------------------------------------------------------
     Game();
@@ -69,6 +59,10 @@ public:
     // assignment, HUD state) and reenters the Countdown state.
     void resetRace();
 
+    RaceSession& race() { return *m_race; }
+    const RaceSession& race() const { return *m_race; }
+    void synchronizeEngineSound();
+
     // -- Rendering helpers ------------------------------------------------
     // Rebuilds any car's lap texture whose lap count changed. Called every frame.
     void refreshLapTextures();
@@ -86,23 +80,15 @@ public:
     std::unique_ptr<StartLine> startLine;
     SDL_TexturePtr carTexture;
 
-    std::vector<Car> cars;
-    std::vector<Rock> rocks;
-    std::vector<Gate> gates;
-
-    int player1Index = -1;
-    int player2Index = -1;
-
     // Player 1/2 labels in the top-left corner.
     SDL_TexturePtr player1LabelTexture;
     SDL_TexturePtr player2LabelTexture;
     SDL_Rect player1LabelRect{ 20, 20, 0, 0 };
     SDL_Rect player2LabelRect{ 20, 20, 0, 0 };
 
-    // Per-car lap HUD stacked on the right.
-    std::vector<SDL_TexturePtr> carLapTextures;
-    std::vector<SDL_Rect> carLapRects;
-    std::vector<int> carLastLaps;
+    // Per-car lap HUD stacked on the right, one row per car (indexed the same
+    // as RaceSession::cars()). Drawn by HudRenderer::renderLeaderboard.
+    std::vector<CarHudRow> carHud;
 
     // Countdown overlay.
     float countdownTimer = 0.0f;
@@ -110,8 +96,7 @@ public:
     SDL_Rect countdownRect{ 0, 0, 0, 0 };
     int countdownLastDigit = -2;
 
-    // Race outcome.
-    int winnerIndex = -1;
+    // Race outcome presentation.
     SDL_TexturePtr winnerTexture;
     SDL_Rect winnerRect{ 0, 0, 0, 0 };
     SDL_TexturePtr winnerHintTexture;
@@ -122,15 +107,17 @@ public:
     UiSound uiSound;
     Voice voice;
     bool voiceAvailable = false;
+    std::unique_ptr<Announcer> announcer;
 
 private:
     void pollEvents();
     void renderFrame();
-    void renderWorld();
-    void renderPlayerLabels();
-    void renderLeaderboard();
     void applyPendingState();
+    void updateWindowTitle();
 
+    RaceTuning m_raceTuning;
+    AiTuning m_aiTuning;
+    std::unique_ptr<RaceSession> m_race;
     std::unique_ptr<GameState> m_state;
     std::unique_ptr<GameState> m_pendingState;
     bool m_running = true;
