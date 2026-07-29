@@ -1,11 +1,13 @@
 #pragma once
 
 #include <SDL2/SDL.h>
+#include <memory>
 #include <vector>
 
 #include "SdlRaii.h"
 #include "actor/Actor.h"
 
+class InputController;
 class Track;
 
 // Bundles the tunable physics/input parameters shared by every car so the per-frame
@@ -51,14 +53,24 @@ public:
     // the line (race start) and must not itself be counted as a completed lap.
     bool hasStarted = false;
 
-    Car() = default;
+    // Per-car input strategy. Cars default to `AiInput` at construction; player
+    // assignment swaps in a `KeyboardInput` bound to WASD or IJKL.
+    std::unique_ptr<InputController> input;
+
+    Car();
     Car(float s, float laneOffset, float speed, SDL_Color color,
          const char* name, float targetSpeed);
+    ~Car();
 
-    // Advances this car by one frame: applies keyboard input (player cars) or the
-    // adaptive-cruise AI (AI cars), then updates s, distanceTraveled and laps.
-    // `allCars`/`selfIndex` let the AI look at other cars in its own lane so it
-    // follows a slower car ahead instead of ramming it.
+    // Move-only: unique_ptr member forbids copying.
+    Car(const Car&) = delete;
+    Car& operator=(const Car&) = delete;
+    Car(Car&&) noexcept;
+    Car& operator=(Car&&) noexcept;
+
+    // Advances this car by one frame: delegates input/AI to `input`, then updates
+    // s, distanceTraveled and laps. `allCars`/`selfIndex` let the AI look at
+    // other cars to overtake or follow instead of ramming them.
     void update(float dt, const std::vector<Car>& allCars, size_t selfIndex,
                  float totalLength, const CarControls& ctrl);
 

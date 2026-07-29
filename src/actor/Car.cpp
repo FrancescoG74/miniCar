@@ -7,143 +7,28 @@
 #include <string>
 
 #include "Track.h"
+#include "input/AiInput.h"
+#include "input/InputController.h"
+#include "input/KeyboardInput.h"
+
+Car::Car() : input(std::make_unique<AiInput>()) {}
 
 Car::Car(float s_, float laneOffset_, float speed_, SDL_Color color_,
           const char* name_, float targetSpeed_)
     : Actor(name_, color_),
        s(s_), laneOffset(laneOffset_), targetLaneOffset(laneOffset_),
        speed(speed_), targetSpeed(targetSpeed_),
-       hasStarted(s_ >= 0.0f) {}
+       hasStarted(s_ >= 0.0f),
+       input(std::make_unique<AiInput>()) {}
+
+Car::~Car() = default;
+Car::Car(Car&&) noexcept = default;
+Car& Car::operator=(Car&&) noexcept = default;
 
 void Car::update(float dt, const std::vector<Car>& allCars, size_t selfIndex,
                   float totalLength, const CarControls& ctrl) {
-    if (playerNumber == 1) {
-        if (ctrl.keys[SDL_SCANCODE_W]) speed = std::min(ctrl.maxSpeed, speed + ctrl.playerAccel * dt);
-        if (ctrl.keys[SDL_SCANCODE_S]) speed = std::max(0.0f, speed - ctrl.playerBrake * dt);
-        if (ctrl.keys[SDL_SCANCODE_A]) laneOffset = std::max(-ctrl.laneLimit, laneOffset - ctrl.playerSteerRate * dt);
-        if (ctrl.keys[SDL_SCANCODE_D]) laneOffset = std::min(ctrl.laneLimit, laneOffset + ctrl.playerSteerRate * dt);
-    } else if (playerNumber == 2) {
-        if (ctrl.keys[SDL_SCANCODE_I]) speed = std::min(ctrl.maxSpeed, speed + ctrl.playerAccel * dt);
-        if (ctrl.keys[SDL_SCANCODE_K]) speed = std::max(0.0f, speed - ctrl.playerBrake * dt);
-        if (ctrl.keys[SDL_SCANCODE_J]) laneOffset = std::max(-ctrl.laneLimit, laneOffset - ctrl.playerSteerRate * dt);
-        if (ctrl.keys[SDL_SCANCODE_L]) laneOffset = std::min(ctrl.laneLimit, laneOffset + ctrl.playerSteerRate * dt);
-    } else {
-        // -- Overtaking logic ---------------------------------------------------
-        // AI cars home into one of two racing lanes (±kHomeLaneMagnitude). When a
-        // slower car sits ahead in the current target lane, we try to switch to
-        // the opposite lane so we can drive past instead of just tailgating.
-        constexpr float kHomeLaneMagnitude = 25.0f;
-        constexpr float kLaneMatchTolerance = 15.0f;  // laneOffset delta counted as "same lane"
-        constexpr float kOvertakeLookAhead = 90.0f;   // start looking to overtake within this range
-        constexpr float kOvertakeSpeedMargin = 5.0f;  // require the car ahead to be this much slower
-        constexpr float kSafeGapFront = 100.0f;       // needed clear space ahead in the target lane
-        constexpr float kSafeGapBack = 45.0f;         // needed clear space behind in the target lane
-        constexpr float kAiSteerRate = 45.0f;         // lane-change rate in units/second
-
-        // Make sure the target lane is one of the two racing lanes. If a human
-        // just handed the car back to the AI it may be at an arbitrary offset.
-        if (std::abs(targetLaneOffset) < 1.0f) {
-            targetLaneOffset = (laneOffset >= 0.0f) ? kHomeLaneMagnitude : -kHomeLaneMagnitude;
-        }
-
-        // Is there a slower car ahead of me in the lane I'm currently heading to?
-        bool blockedAhead = false;
-        for (size_t j = 0; j < allCars.size(); ++j) {
-            if (j == selfIndex) continue;
-            const Car& other = allCars[j];
-            if (std::abs(other.laneOffset - targetLaneOffset) > kLaneMatchTolerance) continue;
-
-            float gap = other.s - s;
-            while (gap > totalLength / 2.0f) gap -= totalLength;
-            while (gap < -totalLength / 2.0f) gap += totalLength;
-
-            if (gap > 0.0f && gap < kOvertakeLookAhead &&
-                other.speed + kOvertakeSpeedMargin < targetSpeed) {
-                blockedAhead = true;
-                break;
-            }
-        }
-
-        if (blockedAhead) {
-            float altLane = -targetLaneOffset;
-            bool altSafe = true;
-            for (size_t j = 0; j < allCars.size(); ++j) {
-                if (j == selfIndex) continue;
-                const Car& other = allCars[j];
-                if (std::abs(other.laneOffset - altLane) > kLaneMatchTolerance) continue;
-
-                float gap = other.s - s;
-                while (gap > totalLength / 2.0f) gap -= totalLength;
-                while (gap < -totalLength / 2.0f) gap += totalLength;
-
-                if (gap >= -kSafeGapBack && gap <= kSafeGapFront) {
-                    altSafe = false;
-                    break;
-                }
-            }
-            if (altSafe) targetLaneOffset = altLane;
-        }
-
-        // Steer laneOffset toward the current target at a bounded rate so lane
-        // changes look smooth rather than teleporting.
-        float laneDelta = targetLaneOffset - laneOffset;
-        float laneStep = kAiSteerRate * dt;
-        if (laneDelta > laneStep) laneOffset += laneStep;
-        else if (laneDelta < -laneStep) laneOffset -= laneStep;
-        else laneOffset = targetLaneOffset;
-
-        // AI cars can't change lanes, so a faster AI stuck behind a slower one in
-        // the same lane would otherwise ram it every lap. Cap its speed to whatever's
-        // directly ahead in the same lane so it follows instead of colliding.
-        float aheadCarCap = ctrl.maxSpeed;
-        for (size_t j = 0; j < allCars.size(); ++j) {
-            if (j == selfIndex) continue;
-            const Car& other = allCars[j];
-            if (std::abs(other.laneOffset - laneOffset) > 35.0f) continue; // different lane
-
-            float gap = other.s - s;
-            while (gap > totalLength / 2.0f) gap -= totalLength;
-            while (gap < -totalLength / 2.0f) gap += totalLength;
-
-            if (gap > 0.0f && gap < 60.0f) {
-                aheadCarCap = std::min(aheadCarCap, other.speed);
-            }
-        }
-
-        // Slow down when approaching a currently-blocked spot (e.g. a closed gate).
-        // The cap ramps down linearly with distance so the AI eases to a stop just
-        // before the obstacle instead of oscillating against it. Kept separate from
-        // the car-follow cap so post-crash recovery can ignore the follow cap while
-        // still respecting static obstacles ahead.
-        float obstacleCap = ctrl.maxSpeed;
-        if (ctrl.blockedSPositions) {
-            constexpr float kLookAhead = 120.0f;
-            for (float blockedS : *ctrl.blockedSPositions) {
-                float gap = blockedS - s;
-                while (gap > totalLength / 2.0f) gap -= totalLength;
-                while (gap < -totalLength / 2.0f) gap += totalLength;
-                if (gap > 0.0f && gap < kLookAhead) {
-                    float allowed = (gap / kLookAhead) * ctrl.maxSpeed;
-                    obstacleCap = std::min(obstacleCap, allowed);
-                }
-            }
-        }
-
-        float desiredSpeed = std::min({ targetSpeed, aheadCarCap, obstacleCap });
-        float accelRate = ctrl.aiAccel;
-        if (recoveryTimer > 0.0f) {
-            accelRate *= ctrl.recoveryBoost;
-            recoveryTimer = std::max(0.0f, recoveryTimer - dt);
-            // While recovering from a crash, ignore the follow-distance speed cap
-            // (a chain-stopped car ahead would otherwise clamp us to 0), but keep
-            // the obstacle cap so we still ease to a stop before a closed gate.
-            desiredSpeed = std::min(targetSpeed, obstacleCap);
-        }
-        if (speed < desiredSpeed) {
-            speed = std::min(desiredSpeed, speed + accelRate * dt);
-        } else if (speed > desiredSpeed) {
-            speed = std::max(desiredSpeed, speed - accelRate * dt);
-        }
+    if (input) {
+        input->drive(*this, dt, allCars, selfIndex, totalLength, ctrl);
     }
 
     float newS = s + speed * dt;
@@ -178,15 +63,17 @@ void Car::update(float dt, const std::vector<Car>& allCars, size_t selfIndex,
 std::vector<Car> Car::createInitialGrid(float laneOffset) {
     // All rows are staggered strictly behind the start line (s < 0) so every car
     // must actually drive up to and cross the line before lap 1 begins -- none of
-    // them start sitting exactly on top of it.
-    return {
-        Car(-45.0f,  -laneOffset, 90.0f,  SDL_Color{ 220, 40, 40, 255 },  "Red",    90.0f),
-        Car(-45.0f,   laneOffset, 100.0f, SDL_Color{ 40, 90, 220, 255 },  "Blue",   100.0f),
-        Car(-90.0f,  -laneOffset, 80.0f,  SDL_Color{ 40, 180, 60, 255 },  "Green",  80.0f),
-        Car(-90.0f,   laneOffset, 110.0f, SDL_Color{ 230, 200, 30, 255 }, "Yellow", 110.0f),
-        Car(-135.0f, -laneOffset, 95.0f,  SDL_Color{ 230, 120, 30, 255 }, "Orange", 95.0f),
-        Car(-135.0f,  laneOffset, 105.0f, SDL_Color{ 150, 60, 200, 255 }, "Purple", 105.0f),
-    };
+    // them start sitting exactly on top of it. Built with emplace_back because
+    // Car is move-only (owns its InputController via unique_ptr).
+    std::vector<Car> grid;
+    grid.reserve(6);
+    grid.emplace_back(-45.0f,  -laneOffset, 90.0f,  SDL_Color{ 220, 40, 40, 255 },  "Red",    90.0f);
+    grid.emplace_back(-45.0f,   laneOffset, 100.0f, SDL_Color{ 40, 90, 220, 255 },  "Blue",   100.0f);
+    grid.emplace_back(-90.0f,  -laneOffset, 80.0f,  SDL_Color{ 40, 180, 60, 255 },  "Green",  80.0f);
+    grid.emplace_back(-90.0f,   laneOffset, 110.0f, SDL_Color{ 230, 200, 30, 255 }, "Yellow", 110.0f);
+    grid.emplace_back(-135.0f, -laneOffset, 95.0f,  SDL_Color{ 230, 120, 30, 255 }, "Orange", 95.0f);
+    grid.emplace_back(-135.0f,  laneOffset, 105.0f, SDL_Color{ 150, 60, 200, 255 }, "Purple", 105.0f);
+    return grid;
 }
 
 namespace {
@@ -215,6 +102,7 @@ int Car::assignPlayer1(std::vector<Car>& cars, SDL_Window* window) {
     std::uniform_int_distribution<int> dist(0, static_cast<int>(cars.size()) - 1);
     int player1Index = dist(rng);
     cars[player1Index].playerNumber = 1;
+    cars[player1Index].input = std::make_unique<KeyboardInput>(KeyboardInput::wasd());
 
     std::cout << "Player 1 controls the " << cars[player1Index].getName() << " car (W/A/S/D).\n"
                << "Press '2' to add Player 2, '1' to remove them." << std::endl;
@@ -236,6 +124,7 @@ int Car::assignPlayer2(std::vector<Car>& cars, SDL_Window* window, int player1In
     std::uniform_int_distribution<int> dist(0, static_cast<int>(candidates.size()) - 1);
     int player2Index = candidates[dist(rng)];
     cars[player2Index].playerNumber = 2;
+    cars[player2Index].input = std::make_unique<KeyboardInput>(KeyboardInput::ijkl());
 
     std::cout << "Player 2 joined: controls the " << cars[player2Index].getName()
                << " car (I/J/K/L)." << std::endl;
@@ -247,6 +136,7 @@ void Car::removePlayer2(std::vector<Car>& cars, SDL_Window* window,
                           int player1Index, int player2Index) {
     if (player2Index < 0 || player2Index >= static_cast<int>(cars.size())) return;
     cars[player2Index].playerNumber = 0;
+    cars[player2Index].input = std::make_unique<AiInput>();
     // Snap the AI's steering target to the nearest racing lane so it doesn't
     // wander off in whatever direction the player was pointing.
     cars[player2Index].targetLaneOffset =

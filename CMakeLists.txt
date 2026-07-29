@@ -19,6 +19,10 @@ add_executable(minicar
     src/actor/Rock.cpp
     src/actor/Gate.cpp
     src/actor/StartLine.cpp
+    src/input/KeyboardInput.cpp
+    src/input/AiInput.cpp
+    src/game/Game.cpp
+    src/game/GamePhases.cpp
 )
 
 target_include_directories(minicar PRIVATE
