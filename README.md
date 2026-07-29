@@ -37,6 +37,8 @@ actor, resolves collisions, then renders the world and the HUD.
 | `Gate` | [include/actor/Gate.h](include/actor/Gate.h) | `Actor`. Barrier that cycles between open and closed; when closed it blocks cars. |
 | `StartLine` | [include/actor/StartLine.h](include/actor/StartLine.h) | `Actor`. Checkered start/finish stripe positioned at an arc-length `s` on the track. |
 | `EngineSound` | [include/Audio.h](include/Audio.h) | SDL audio callback that mixes up to `kMaxCars` sawtooth engines with per-car pitch/volume. |
+| `UiSound` | [include/Audio.h](include/Audio.h) | One-shot SDL beep tones (e.g. countdown fallback) queued via `SDL_QueueAudio`. |
+| `Voice` | [include/Voice.h](include/Voice.h) | Optional spoken-word cue ("3", "2", "1", "Go") synthesized with espeak-ng, if found at build time; otherwise a silent no-op and the game falls back to `UiSound` beeps. |
 | `AppWindow` / `initApp` | [include/Setup.h](include/Setup.h) | Bundles window/renderer/font and centralizes SDL init and shutdown. |
 
 ### Frame flow
@@ -66,12 +68,18 @@ flowchart LR
 - CMake ≥ 3.16 and a build tool (Ninja or Make).
 - SDL2 development headers/libraries.
 - SDL2_ttf development headers/libraries.
+- *(Optional)* `libespeak-ng` runtime library, for a spoken ("3", "2", "1", "Go")
+  pre-race countdown instead of plain beep tones. `CMakeLists.txt` auto-detects
+  it (including the bare versioned runtime `.so.1`, without needing the -dev
+  package/headers); if it's not found the game still builds fine and just uses
+  beeps.
 
 Install on Debian/Ubuntu:
 
 ```bash
 sudo apt install build-essential cmake ninja-build \
-                 libsdl2-dev libsdl2-ttf-dev
+                 libsdl2-dev libsdl2-ttf-dev \
+                 libespeak-ng1  # optional, for the spoken countdown
 ```
 
 Install on Fedora:
