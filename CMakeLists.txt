@@ -13,6 +13,7 @@ add_executable(minicar
     src/Audio.cpp
     src/Voice.cpp
     src/Setup.cpp
+    src/CollisionSystem.cpp
     src/actor/Car.cpp
     src/actor/Actor.cpp
     src/actor/Rock.cpp

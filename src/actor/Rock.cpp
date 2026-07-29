@@ -4,7 +4,6 @@
 #include <cmath>
 #include <random>
 
-#include "actor/Car.h"
 #include "Track.h"
 
 namespace {
@@ -91,45 +90,4 @@ std::vector<Rock> Rock::createInitialRocks(const Track& track) {
         rocks.emplace_back(L * frac, lateral, track, sizeDist(rng));
     }
     return rocks;
-}
-
-void Rock::resolveCarCollisions(std::vector<Car>& cars,
-                                  const std::vector<Rock>& rocks,
-                                  float totalLength,
-                                  float carLength, float carWidthDim) {
-    for (auto& car : cars) {
-        for (const auto& rock : rocks) {
-            if (!rock.active) continue;
-
-            // Wrap-aware forward gap in track-local coords.
-            float gap = rock.s - car.s;
-            while (gap > totalLength / 2.0f) gap -= totalLength;
-            while (gap < -totalLength / 2.0f) gap += totalLength;
-            float lateralGap = rock.laneOffset - car.laneOffset;
-
-            // Sum of half-extents: car footprint + rock's *collision* radius. Because
-            // the rock renders as an irregular octagon (not a full square of side
-            // 2*size), we use ~55% of the drawing size as the collision radius. This
-            // matches the visible polygon more closely and, combined with placing
-            // rocks at |laneOffset| >= 45, keeps the hitboxes clear of the AI's ±25
-            // lanes so AI cars never oscillate against a rock they can't avoid.
-            const float rockCollisionRadius = rock.size * 0.55f;
-            float sExtent = carLength / 2.0f + rockCollisionRadius;
-            float latExtent = carWidthDim / 2.0f + rockCollisionRadius;
-
-            if (std::abs(gap) >= sExtent || std::abs(lateralGap) >= latExtent) continue;
-
-            // Push the car back along the track so it isn't overlapping the rock any
-            // more (the rock is static, only the car moves).
-            float push = sExtent - std::abs(gap) + 1.0f;
-            if (gap >= 0.0f) {
-                car.s = std::fmod(car.s - push + totalLength, totalLength);
-            } else {
-                car.s = std::fmod(car.s + push + totalLength, totalLength);
-            }
-
-            car.speed = 0.0f;
-            car.recoveryTimer = Car::kRecoveryDuration;
-        }
-    }
 }

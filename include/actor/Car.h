@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <vector>
 
+#include "SdlRaii.h"
 #include "actor/Actor.h"
 
 class Track;
@@ -81,13 +82,8 @@ public:
     static void removePlayer2(std::vector<Car>& cars, SDL_Window* window,
                                 int player1Index, int player2Index);
 
-    // Creates a simple white "car" sprite texture the caller can tint per-car and
-    // must destroy with SDL_DestroyTexture.
-    static SDL_Texture* createTexture(SDL_Renderer* renderer, int width, int height);
-
-    // Detects cars that are too close and, when found, zeroes both cars' speed and
-    // nudges them apart. The collision area is a rectangle matching the car's
-    // footprint (`carLength` along direction of travel, `carWidthDim` across lanes).
-    static void resolveCollisions(std::vector<Car>& cars, float totalLength,
-                                   float carLength, float carWidthDim);
+    // Creates a simple white "car" sprite texture the caller can tint per-car.
+    // Returned as an owning SDL_TexturePtr so the caller doesn't have to
+    // remember SDL_DestroyTexture.
+    static SDL_TexturePtr createTexture(SDL_Renderer* renderer, int width, int height);
 };

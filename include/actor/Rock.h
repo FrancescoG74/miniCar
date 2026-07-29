@@ -5,7 +5,6 @@
 
 #include "actor/Actor.h"
 
-class Car;
 class Track;
 
 // A static obstacle sitting on the circuit. Its world position is computed once at
@@ -28,11 +27,4 @@ public:
     // ever collide with a rock -- AI cars can't change lanes and would otherwise get
     // stuck against an in-lane rock forever.
     static std::vector<Rock> createInitialRocks(const Track& track);
-
-    // Detects car-vs-rock overlap and, when found, zeroes the car's speed, arms its
-    // recovery boost, and pushes the car back along the track (away from the rock).
-    static void resolveCarCollisions(std::vector<Car>& cars,
-                                       const std::vector<Rock>& rocks,
-                                       float totalLength,
-                                       float carLength, float carWidthDim);
 };

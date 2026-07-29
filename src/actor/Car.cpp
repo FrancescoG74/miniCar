@@ -256,7 +256,7 @@ void Car::removePlayer2(std::vector<Car>& cars, SDL_Window* window,
     updateWindowTitle(cars, window, player1Index, -1);
 }
 
-SDL_Texture* Car::createTexture(SDL_Renderer* renderer, int width, int height) {
+SDL_TexturePtr Car::createTexture(SDL_Renderer* renderer, int width, int height) {
     SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, width, height, 32, SDL_PIXELFORMAT_RGBA32);
     SDL_FillRect(surface, nullptr, SDL_MapRGBA(surface->format, 255, 255, 255, 255));
 
@@ -267,37 +267,5 @@ SDL_Texture* Car::createTexture(SDL_Renderer* renderer, int width, int height) {
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
     SDL_FreeSurface(surface);
-    return texture;
-}
-
-void Car::resolveCollisions(std::vector<Car>& cars, float totalLength,
-                              float carLength, float carWidthDim) {
-    for (size_t i = 0; i < cars.size(); ++i) {
-        for (size_t j = i + 1; j < cars.size(); ++j) {
-            Car& a = cars[i];
-            Car& b = cars[j];
-
-            // Wrap-aware gap along the track to figure out who is ahead of whom.
-            float gap = b.s - a.s;
-            while (gap > totalLength / 2.0f) gap -= totalLength;
-            while (gap < -totalLength / 2.0f) gap += totalLength;
-            float lateralGap = b.laneOffset - a.laneOffset;
-
-            if (std::abs(gap) >= carLength || std::abs(lateralGap) >= carWidthDim) continue;
-
-            float push = (carLength - std::abs(gap)) / 2.0f + 1.0f;
-            if (gap >= 0.0f) {
-                b.s = std::fmod(b.s + push + totalLength, totalLength);
-                a.s = std::fmod(a.s - push + totalLength, totalLength);
-            } else {
-                a.s = std::fmod(a.s + push + totalLength, totalLength);
-                b.s = std::fmod(b.s - push + totalLength, totalLength);
-            }
-
-            a.speed = 0.0f;
-            b.speed = 0.0f;
-            a.recoveryTimer = kRecoveryDuration;
-            b.recoveryTimer = kRecoveryDuration;
-        }
-    }
+    return SDL_TexturePtr(texture);
 }

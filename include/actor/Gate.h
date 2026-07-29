@@ -5,7 +5,6 @@
 
 #include "actor/Actor.h"
 
-class Car;
 class Track;
 
 // A gate barrier across the track that cyclically opens and closes. When closed it
@@ -45,13 +44,6 @@ public:
     // Two gates placed on opposite sides of the circuit, each with independently
     // randomized open/close timing (see kMin/MaxClosedDuration, kMin/MaxOpenDuration).
     static std::vector<Gate> createInitialGates(const Track& track, float trackWidth);
-
-    // Push any car overlapping a *closed* gate back along the track, zeroing its
-    // speed. Open gates are ignored.
-    static void resolveCarCollisions(std::vector<Car>& cars,
-                                       const std::vector<Gate>& gates,
-                                       float totalLength,
-                                       float carLength);
 
 private:
     bool m_closed = true;      // current open/closed state

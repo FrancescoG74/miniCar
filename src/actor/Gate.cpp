@@ -3,7 +3,6 @@
 #include <cmath>
 #include <random>
 
-#include "actor/Car.h"
 #include "Track.h"
 
 namespace {
@@ -100,33 +99,4 @@ std::vector<Gate> Gate::createInitialGates(const Track& track, float trackWidth)
         Gate(L * 0.25f, track, halfWidth),
         Gate(L * 0.75f, track, halfWidth),
     };
-}
-
-void Gate::resolveCarCollisions(std::vector<Car>& cars,
-                                  const std::vector<Gate>& gates,
-                                  float totalLength,
-                                  float carLength) {
-    for (auto& car : cars) {
-        for (const auto& gate : gates) {
-            if (!gate.active || !gate.isClosed()) continue;
-
-            // Wrap-aware forward gap in track-local coords.
-            float gap = gate.s - car.s;
-            while (gap > totalLength / 2.0f) gap -= totalLength;
-            while (gap < -totalLength / 2.0f) gap += totalLength;
-
-            const float sExtent = carLength / 2.0f + gate.thickness / 2.0f;
-            if (std::abs(gap) >= sExtent) continue;
-
-            // Gates span the full track width, so any car in the s-overlap collides.
-            float push = sExtent - std::abs(gap) + 1.0f;
-            if (gap >= 0.0f) {
-                car.s = std::fmod(car.s - push + totalLength, totalLength);
-            } else {
-                car.s = std::fmod(car.s + push + totalLength, totalLength);
-            }
-            car.speed = 0.0f;
-            car.recoveryTimer = Car::kRecoveryDuration;
-        }
-    }
 }
