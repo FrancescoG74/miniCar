@@ -45,6 +45,10 @@ public:
     int laps = 0;
     float targetSpeed = 0.0f;    // cruising speed AI cars accelerate back to after a collision
     float recoveryTimer = 0.0f;  // while > 0, AI accelerates faster to recover from a crash
+    // True once this car has passed the start line for the first time. Grid cars
+    // spawn staggered behind s = 0, so their first crossing just brings them up to
+    // the line (race start) and must not itself be counted as a completed lap.
+    bool hasStarted = false;
 
     Car() = default;
     Car(float s, float laneOffset, float speed, SDL_Color color,

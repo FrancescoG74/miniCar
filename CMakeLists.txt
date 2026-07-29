@@ -11,6 +11,7 @@ add_executable(minicar
     src/main.cpp
     src/Track.cpp
     src/Audio.cpp
+    src/Voice.cpp
     src/Setup.cpp
     src/actor/Car.cpp
     src/actor/Actor.cpp
@@ -23,6 +24,32 @@ target_include_directories(minicar PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${SDL2_INCLUDE_DIRS}
 )
+
+# Optional: spoken-word countdown ("3", "2", "1", "Go") via espeak-ng, if its
+# runtime library can be found. Only the -dev package ships an unversioned
+# libespeak-ng.so + headers, so this also looks for the bare versioned runtime
+# lib (e.g. Debian/Ubuntu without espeak-ng-dev installed). When not found, the
+# game still builds and falls back to simple beep tones (see UiSound).
+find_library(ESPEAK_NG_LIBRARY NAMES espeak-ng)
+if(NOT ESPEAK_NG_LIBRARY)
+    file(GLOB _espeak_ng_versioned_candidates
+        /usr/lib/*/libespeak-ng.so.1
+        /usr/lib/libespeak-ng.so.1
+        /usr/lib64/libespeak-ng.so.1
+        /usr/local/lib/libespeak-ng.so.1
+    )
+    if(_espeak_ng_versioned_candidates)
+        list(GET _espeak_ng_versioned_candidates 0 ESPEAK_NG_LIBRARY)
+    endif()
+endif()
+
+if(ESPEAK_NG_LIBRARY)
+    message(STATUS "espeak-ng found (${ESPEAK_NG_LIBRARY}): spoken countdown enabled")
+    target_compile_definitions(minicar PRIVATE MINICAR_HAVE_ESPEAK=1)
+    target_link_libraries(minicar PRIVATE ${ESPEAK_NG_LIBRARY})
+else()
+    message(STATUS "espeak-ng not found: countdown will use beep tones only")
+endif()
 
 if(TARGET SDL2::SDL2)
     target_link_libraries(minicar PRIVATE SDL2::SDL2)

@@ -13,6 +13,7 @@
 #include "Setup.h"
 #include "actor/StartLine.h"
 #include "Track.h"
+#include "Voice.h"
 
 namespace {
 
@@ -42,8 +43,8 @@ void drawCircle(SDL_Renderer* renderer, float cx, float cy, float radius, SDL_Co
 } // namespace
 
 int main(int argc, char* argv[]) {
-    const int windowWidth = 1280;
-    const int windowHeight = 960;
+    const int windowWidth = 1600;
+    const int windowHeight = 900;
     AppWindow app;
     if (!initApp(app, windowWidth, windowHeight, "miniCar")) return 1;
     SDL_Window* window = app.window;
@@ -52,34 +53,33 @@ int main(int argc, char* argv[]) {
 
     // Circuit laid out in the middle of the window.
     const float trackWidth = 130.0f;
-    Track track(640.0f, 480.0f, /*straightLength=*/500.0f, /*radius=*/190.0f, /*width=*/trackWidth);
+    Track track(800.0f, 450.0f, /*straightLength=*/500.0f, /*radius=*/190.0f, /*width=*/trackWidth);
 
     const int carWidth = 16;
     const int carHeight = 30;
     SDL_Texture* carTexture = Car::createTexture(renderer, carWidth, carHeight);
 
     const float laneOffset = 25.0f;
-    std::vector<Car> cars = Car::createInitialGrid(laneOffset);
-    std::vector<Rock> rocks = Rock::createInitialRocks(track);
-    std::vector<Gate> gates = Gate::createInitialGates(track, trackWidth);
+    std::vector<Car> cars;
+    std::vector<Rock> rocks;
+    std::vector<Gate> gates;
     StartLine startLine(track, trackWidth);
 
-    int player1Index = Car::assignPlayer1(cars, window);
+    int player1Index = -1;
     int player2Index = -1; // -1 = single-player; set when player 2 joins
 
     // "Player 1" / "Player 2" labels rendered once and blitted in the top-left corner every frame.
     SDL_Rect player1LabelRect{ 20, 20, 0, 0 };
     SDL_Rect player2LabelRect{ 20, 20, 0, 0 };
-    SDL_Texture* player1LabelTexture = makeLabelTexture(renderer, font, "Player 1", cars[player1Index].getColor(), player1LabelRect);
+    SDL_Texture* player1LabelTexture = nullptr;
     SDL_Texture* player2LabelTexture = nullptr; // created lazily when P2 joins
-    player2LabelRect.y = player1LabelRect.y + player1LabelRect.h + 14;
 
     // Per-car lap HUD stacked in the top-right corner. Each entry is refreshed only
     // when that car's lap count (or driver color) changes, so we don't rebuild
     // textures every frame.
-    std::vector<SDL_Texture*> carLapTextures(cars.size(), nullptr);
-    std::vector<SDL_Rect> carLapRects(cars.size(), SDL_Rect{ 0, 0, 0, 0 });
-    std::vector<int> carLastLaps(cars.size(), -1);
+    std::vector<SDL_Texture*> carLapTextures;
+    std::vector<SDL_Rect> carLapRects;
+    std::vector<int> carLastLaps;
 
     const int kLapsToWin = 5;
     bool raceFinished = false;
@@ -89,8 +89,20 @@ int main(int argc, char* argv[]) {
     SDL_Texture* winnerHintTexture = nullptr;
     SDL_Rect winnerHintRect{ 0, 0, 0, 0 };
 
+    // Pre-race countdown: cars/gates stay frozen while this counts down from
+    // kCountdownDuration to 0, showing "3", "2", "1", "0" before the race begins.
+    const float kCountdownDuration = 4.0f;
+    float countdownTimer = 0.0f;
+    SDL_Texture* countdownTexture = nullptr;
+    SDL_Rect countdownRect{ 0, 0, 0, 0 };
+    int countdownLastDigit = -2; // sentinel so the first frame always builds a texture
+
     EngineSound engineSound;
     engineSound.init(); // if this fails, the app still runs (silently)
+    UiSound uiSound;
+    uiSound.init(); // if this fails, the app still runs (silently)
+    Voice voice;
+    const bool voiceAvailable = voice.init(); // false if espeak-ng wasn't found/available
     const float maxCarSpeed = 130.0f;
     const float playerAccel = 60.0f;
     const float playerBrake = 90.0f;
@@ -98,6 +110,50 @@ int main(int argc, char* argv[]) {
     const float laneLimit = trackWidth / 2.0f - 12.0f;
     const float aiAccel = 50.0f; // how fast AI cars regain their cruising speed after a collision
     const float kRecoveryBoost = 2.5f; // extra acceleration multiplier right after a crash
+
+    // (Re)initializes everything that changes race-to-race: the car grid, player
+    // assignment, HUD textures and win state. Called once up front and again
+    // whenever the player presses 'R' to restart.
+    auto resetRace = [&]() {
+        if (player1LabelTexture) { SDL_DestroyTexture(player1LabelTexture); player1LabelTexture = nullptr; }
+        if (player2LabelTexture) { SDL_DestroyTexture(player2LabelTexture); player2LabelTexture = nullptr; }
+        for (SDL_Texture*& tex : carLapTextures) {
+            if (tex) SDL_DestroyTexture(tex);
+        }
+        if (winnerTexture) { SDL_DestroyTexture(winnerTexture); winnerTexture = nullptr; }
+        if (winnerHintTexture) { SDL_DestroyTexture(winnerHintTexture); winnerHintTexture = nullptr; }
+        if (countdownTexture) { SDL_DestroyTexture(countdownTexture); countdownTexture = nullptr; }
+
+        cars = Car::createInitialGrid(laneOffset);
+        rocks = Rock::createInitialRocks(track);
+        gates = Gate::createInitialGates(track, trackWidth);
+
+        player1Index = Car::assignPlayer1(cars, window);
+        player2Index = -1;
+
+        player1LabelRect = SDL_Rect{ 20, 20, 0, 0 };
+        player1LabelTexture = makeLabelTexture(renderer, font, "Player 1",
+                                                 cars[player1Index].getColor(), player1LabelRect);
+        player2LabelRect = SDL_Rect{ 20, player1LabelRect.y + player1LabelRect.h + 14, 0, 0 };
+
+        carLapTextures.assign(cars.size(), nullptr);
+        carLapRects.assign(cars.size(), SDL_Rect{ 0, 0, 0, 0 });
+        carLastLaps.assign(cars.size(), -1);
+
+        raceFinished = false;
+        winnerIndex = -1;
+        winnerRect = SDL_Rect{ 0, 0, 0, 0 };
+        winnerHintRect = SDL_Rect{ 0, 0, 0, 0 };
+
+        countdownTimer = kCountdownDuration;
+        countdownLastDigit = -2;
+
+        for (int i = 0; i < EngineSound::kMaxCars; ++i) {
+            engineSound.setCarSpeed(i, 0.0f);
+        }
+    };
+
+    resetRace();
 
     bool running = true;
     SDL_Event event;
@@ -111,6 +167,8 @@ int main(int argc, char* argv[]) {
                 SDL_Keycode k = event.key.keysym.sym;
                 if (k == SDLK_ESCAPE) {
                     running = false;
+                } else if (k == SDLK_r) {
+                    resetRace();
                 } else if (k == SDLK_2 && player2Index < 0 && !raceFinished) {
                     // Add player 2: pick a random AI car.
                     int newP2 = Car::assignPlayer2(cars, window, player1Index);
@@ -142,7 +200,14 @@ int main(int argc, char* argv[]) {
         const Uint8* keys = SDL_GetKeyboardState(nullptr);
 
         const float totalLength = track.totalLength();
-        if (!raceFinished) {
+        if (countdownTimer > 0.0f) {
+            // Freeze the world during the pre-race countdown; engines idle silently
+            // and no car/gate update runs, so there's no way to jump the start.
+            countdownTimer = std::max(0.0f, countdownTimer - dt);
+            for (size_t i = 0; i < cars.size(); ++i) {
+                engineSound.setCarSpeed(static_cast<int>(i), 0.0f);
+            }
+        } else if (!raceFinished) {
             for (auto& gate : gates) gate.update(dt);
 
             // Rebuild the list of s positions AI cars should slow down for (only
@@ -207,6 +272,36 @@ int main(int argc, char* argv[]) {
             carLastLaps[i] = cars[i].laps;
         }
 
+        // Rebuild the countdown number texture only when the displayed digit changes.
+        if (countdownTimer > 0.0f) {
+            int digit = std::max(0, static_cast<int>(std::ceil(countdownTimer)) - 1);
+            if (digit != countdownLastDigit) {
+                if (countdownTexture) SDL_DestroyTexture(countdownTexture);
+                SDL_Rect naturalRect{ 0, 0, 0, 0 };
+                countdownTexture = makeLabelTexture(renderer, font, std::to_string(digit).c_str(),
+                                                      SDL_Color{ 255, 255, 255, 255 }, naturalRect);
+                constexpr float kCountdownScale = 4.0f;
+                countdownRect = SDL_Rect{
+                    (windowWidth - static_cast<int>(naturalRect.w * kCountdownScale)) / 2,
+                    (windowHeight - static_cast<int>(naturalRect.h * kCountdownScale)) / 2,
+                    static_cast<int>(naturalRect.w * kCountdownScale),
+                    static_cast<int>(naturalRect.h * kCountdownScale)
+                };
+                countdownLastDigit = digit;
+
+                // Audible cue for each number: spoken via espeak-ng when available
+                // (see Voice/MINICAR_HAVE_ESPEAK), otherwise a plain beep for 3/2/1
+                // and a higher, longer beep for 0 (the "go" moment).
+                if (voiceAvailable) {
+                    voice.speak(digit > 0 ? std::to_string(digit) : std::string("Go"));
+                } else if (digit > 0) {
+                    uiSound.playBeep(440.0f, 0.15f);
+                } else {
+                    uiSound.playBeep(880.0f, 0.3f);
+                }
+            }
+        }
+
         // Grass background.
         SDL_SetRenderDrawColor(renderer, 34, 120, 50, 255);
         SDL_RenderClear(renderer);
@@ -259,6 +354,17 @@ int main(int argc, char* argv[]) {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
             SDL_RenderFillRect(renderer, &background);
             SDL_RenderCopy(renderer, player2LabelTexture, nullptr, &player2LabelRect);
+        }
+
+        // Big countdown number centered on screen while the race hasn't started yet.
+        if (countdownTimer > 0.0f && countdownTexture) {
+            SDL_Rect background{
+                countdownRect.x - 20, countdownRect.y - 12,
+                countdownRect.w + 40, countdownRect.h + 24
+            };
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
+            SDL_RenderFillRect(renderer, &background);
+            SDL_RenderCopy(renderer, countdownTexture, nullptr, &countdownRect);
         }
 
         // All-cars leaderboard on the right edge, sorted by lap count (and total
@@ -315,7 +421,10 @@ int main(int argc, char* argv[]) {
     }
     if (winnerTexture) SDL_DestroyTexture(winnerTexture);
     if (winnerHintTexture) SDL_DestroyTexture(winnerHintTexture);
+    if (countdownTexture) SDL_DestroyTexture(countdownTexture);
     engineSound.shutdown();
+    uiSound.shutdown();
+    voice.shutdown();
     SDL_DestroyTexture(carTexture);
     shutdownApp(app);
 

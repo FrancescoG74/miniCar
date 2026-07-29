@@ -14,15 +14,17 @@ class Track;
 // world-space post positions at construction so per-frame rendering stays cheap.
 class Gate : public Actor {
 public:
-    // Complete open+close cycle length, and how much of it the gate spends closed.
-    static constexpr float kCycleDuration = 8.0f;
-    static constexpr float kClosedDuration = 4.0f;
+    // Each gate independently rolls a new random duration every time it toggles
+    // open/closed, within these bounds, so gates don't settle into a predictable
+    // synchronized rhythm.
+    static constexpr float kMinClosedDuration = 2.0f;
+    static constexpr float kMaxClosedDuration = 5.0f;
+    static constexpr float kMinOpenDuration = 2.5f;
+    static constexpr float kMaxOpenDuration = 6.0f;
 
     float s = 0.0f;              // arc-length position on the track centerline
     float trackHalfWidth = 0.0f; // half of the track's drivable width
     float thickness = 8.0f;      // forward thickness (for drawing + collision)
-    float phaseOffset = 0.0f;    // shifts this gate's cycle relative to the global clock
-    float elapsed = 0.0f;
 
     // Precomputed world-space geometry sampled from the track at construction.
     SDL_FPoint postA{ 0.0f, 0.0f };
@@ -32,16 +34,16 @@ public:
     float forwardX = 0.0f;   // along-track unit vector at this s
     float forwardY = 0.0f;
 
-    Gate(float s, float phaseOffset, const Track& track, float trackHalfWidth);
+    Gate(float s, const Track& track, float trackHalfWidth);
 
     void update(float dt);
     void render(SDL_Renderer* renderer) const override;
 
     // True while the gate is currently blocking cars from passing.
-    bool isClosed() const;
+    bool isClosed() const { return m_closed; }
 
-    // Two gates placed on opposite sides of the circuit with staggered phases so
-    // that (typically) one is open while the other is closed.
+    // Two gates placed on opposite sides of the circuit, each with independently
+    // randomized open/close timing (see kMin/MaxClosedDuration, kMin/MaxOpenDuration).
     static std::vector<Gate> createInitialGates(const Track& track, float trackWidth);
 
     // Push any car overlapping a *closed* gate back along the track, zeroing its
@@ -50,4 +52,8 @@ public:
                                        const std::vector<Gate>& gates,
                                        float totalLength,
                                        float carLength);
+
+private:
+    bool m_closed = true;      // current open/closed state
+    float m_phaseTimer = 0.0f; // seconds remaining until the next random toggle
 };

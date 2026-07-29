@@ -55,6 +55,7 @@ flowchart LR
 
 - **Player 1** — `W` / `A` / `S` / `D` to accelerate, steer left, brake, steer right.
 - **Player 2** — `I` / `J` / `K` / `L` (joins/leaves at runtime via the assign helpers in `Car`).
+- **Restart** — `R` resets the race (new car grid, rocks, gates and player assignment).
 - **Quit** — close the window or press `Esc`.
 
 ## Build

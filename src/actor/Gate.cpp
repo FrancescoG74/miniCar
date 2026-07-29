@@ -1,13 +1,24 @@
 #include "actor/Gate.h"
 
 #include <cmath>
+#include <random>
 
 #include "actor/Car.h"
 #include "Track.h"
 
-Gate::Gate(float s_, float phaseOffset_, const Track& track, float trackHalfWidth_)
+namespace {
+
+float randomRange(float lo, float hi) {
+    static std::mt19937 rng{ std::random_device{}() };
+    std::uniform_real_distribution<float> dist(lo, hi);
+    return dist(rng);
+}
+
+} // namespace
+
+Gate::Gate(float s_, const Track& track, float trackHalfWidth_)
     : Actor("Gate", SDL_Color{ 220, 200, 40, 255 }),
-       s(s_), trackHalfWidth(trackHalfWidth_), phaseOffset(phaseOffset_) {
+       s(s_), trackHalfWidth(trackHalfWidth_) {
     TrackPoint p = track.sample(s);
     forwardX = std::cos(p.angle);
     forwardY = std::sin(p.angle);
@@ -16,18 +27,23 @@ Gate::Gate(float s_, float phaseOffset_, const Track& track, float trackHalfWidt
     setPosition({ p.x, p.y });
     postA = { p.x + perpX * trackHalfWidth, p.y + perpY * trackHalfWidth };
     postB = { p.x - perpX * trackHalfWidth, p.y - perpY * trackHalfWidth };
+
+    // Start each gate in a random phase (open or closed) with a random amount of
+    // time left in that phase, so multiple gates don't begin in lockstep.
+    m_closed = randomRange(0.0f, 1.0f) < 0.5f;
+    m_phaseTimer = m_closed ? randomRange(kMinClosedDuration, kMaxClosedDuration)
+                             : randomRange(kMinOpenDuration, kMaxOpenDuration);
 }
 
 void Gate::update(float dt) {
-    elapsed += dt;
-}
-
-bool Gate::isClosed() const {
-    // Phase in [0, kCycleDuration). The first kClosedDuration seconds of the cycle
-    // are "closed", the remainder is "open".
-    float phase = std::fmod(elapsed + phaseOffset, kCycleDuration);
-    if (phase < 0.0f) phase += kCycleDuration;
-    return phase < kClosedDuration;
+    m_phaseTimer -= dt;
+    // Loop (rather than a single if) in case dt ever exceeds the rolled duration.
+    while (m_phaseTimer <= 0.0f) {
+        m_closed = !m_closed;
+        float duration = m_closed ? randomRange(kMinClosedDuration, kMaxClosedDuration)
+                                    : randomRange(kMinOpenDuration, kMaxOpenDuration);
+        m_phaseTimer += duration;
+    }
 }
 
 void Gate::render(SDL_Renderer* renderer) const {
@@ -77,11 +93,12 @@ void Gate::render(SDL_Renderer* renderer) const {
 std::vector<Gate> Gate::createInitialGates(const Track& track, float trackWidth) {
     const float L = track.totalLength();
     const float halfWidth = trackWidth / 2.0f;
-    // Placed on the two curved sections of the stadium track, with phases half a
-    // cycle apart so one is typically open while the other is closed.
+    // Placed on the two curved sections of the stadium track. Each gate's
+    // open/close timing is independently randomized (see Gate::update), so they
+    // no longer follow a fixed synchronized pattern.
     return {
-        Gate(L * 0.25f, 0.0f,                 track, halfWidth),
-        Gate(L * 0.75f, kCycleDuration / 2.0f, track, halfWidth),
+        Gate(L * 0.25f, track, halfWidth),
+        Gate(L * 0.75f, track, halfWidth),
     };
 }
 

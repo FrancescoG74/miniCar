@@ -32,3 +32,25 @@ private:
     std::array<std::atomic<float>, kMaxCars> m_speed{};
     std::array<double, kMaxCars> m_phase{};
 };
+
+// Plays short one-shot beep tones for UI cues (e.g. the pre-race countdown).
+// Uses its own SDL audio device driven via SDL_QueueAudio rather than a
+// callback, since these are one-shot blips rather than a continuous synth.
+class UiSound {
+public:
+    UiSound() = default;
+    ~UiSound();
+
+    // Opens the audio device. Returns false (and logs a warning) if audio is
+    // unavailable; the caller can continue without sound.
+    bool init();
+    void shutdown();
+
+    // Queues a short sine-wave beep at the given frequency/duration. Safe to
+    // call even if init() failed or was never called (silent no-op).
+    void playBeep(float frequencyHz, float durationSeconds, float volume = 0.5f);
+
+private:
+    SDL_AudioDeviceID m_device = 0;
+    int m_sampleRate = 44100;
+};
