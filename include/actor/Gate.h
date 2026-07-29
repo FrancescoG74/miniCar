@@ -3,7 +3,7 @@
 #include <SDL2/SDL.h>
 #include <vector>
 
-#include "Actor.h"
+#include "actor/Actor.h"
 
 class Car;
 class Track;

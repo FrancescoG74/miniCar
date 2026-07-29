@@ -111,22 +111,4 @@ void Track::render(SDL_Renderer* renderer) const {
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderDrawLinesF(renderer, outerPoints.data(), static_cast<int>(outerPoints.size()));
     SDL_RenderDrawLinesF(renderer, innerPoints.data(), static_cast<int>(innerPoints.size()));
-
-    // Start/finish checkered line. At s = 0 the heading is 0 (top straight), so the
-    // perpendicular direction is purely vertical and the line can be drawn axis-aligned.
-    TrackPoint start = sample(0.0f);
-    const int checkerCount = 8;
-    const float checkerHeight = m_width / static_cast<float>(checkerCount);
-    const float lineThickness = 6.0f;
-    for (int i = 0; i < checkerCount; ++i) {
-        SDL_Color c = (i % 2 == 0) ? SDL_Color{ 20, 20, 20, 255 } : SDL_Color{ 235, 235, 235, 255 };
-        SDL_SetRenderDrawColor(renderer, c.r, c.g, c.b, c.a);
-        SDL_FRect rect{
-            start.x - lineThickness / 2.0f,
-            start.y - m_width / 2.0f + checkerHeight * static_cast<float>(i),
-            lineThickness,
-            checkerHeight
-        };
-        SDL_RenderFillRectF(renderer, &rect);
-    }
 }

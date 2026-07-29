@@ -7,10 +7,11 @@
 #include <vector>
 
 #include "Audio.h"
-#include "Car.h"
-#include "Gate.h"
-#include "Rock.h"
+#include "actor/Car.h"
+#include "actor/Gate.h"
+#include "actor/Rock.h"
 #include "Setup.h"
+#include "actor/StartLine.h"
 #include "Track.h"
 
 namespace {
@@ -61,6 +62,7 @@ int main(int argc, char* argv[]) {
     std::vector<Car> cars = Car::createInitialGrid(laneOffset);
     std::vector<Rock> rocks = Rock::createInitialRocks(track);
     std::vector<Gate> gates = Gate::createInitialGates(track, trackWidth);
+    StartLine startLine(track, trackWidth);
 
     int player1Index = Car::assignPlayer1(cars, window);
     int player2Index = -1; // -1 = single-player; set when player 2 joins
@@ -72,13 +74,12 @@ int main(int argc, char* argv[]) {
     SDL_Texture* player2LabelTexture = nullptr; // created lazily when P2 joins
     player2LabelRect.y = player1LabelRect.y + player1LabelRect.h + 14;
 
-    // Small lap-count HUD in the top-right corner, refreshed only when a lap count changes.
-    SDL_Texture* player1LapTexture = nullptr;
-    SDL_Texture* player2LapTexture = nullptr;
-    SDL_Rect player1LapRect{ 0, 20, 0, 0 };
-    SDL_Rect player2LapRect{ 0, 20, 0, 0 };
-    int player1LastLaps = -1;
-    int player2LastLaps = -1;
+    // Per-car lap HUD stacked in the top-right corner. Each entry is refreshed only
+    // when that car's lap count (or driver color) changes, so we don't rebuild
+    // textures every frame.
+    std::vector<SDL_Texture*> carLapTextures(cars.size(), nullptr);
+    std::vector<SDL_Rect> carLapRects(cars.size(), SDL_Rect{ 0, 0, 0, 0 });
+    std::vector<int> carLastLaps(cars.size(), -1);
 
     const int kLapsToWin = 5;
     bool raceFinished = false;
@@ -118,7 +119,7 @@ int main(int argc, char* argv[]) {
                         player2LabelTexture = makeLabelTexture(renderer, font, "Player 2",
                                                                  cars[player2Index].getColor(), player2LabelRect);
                         player2LabelRect.y = player1LabelRect.y + player1LabelRect.h + 14;
-                        player2LastLaps = -1; // force lap HUD refresh next frame
+                        carLastLaps[player2Index] = -1; // driver color changed, rebuild that car's HUD row
                     }
                 } else if (k == SDLK_1 && player2Index >= 0 && !raceFinished) {
                     // Remove player 2: hand the car back to the AI.
@@ -128,11 +129,7 @@ int main(int argc, char* argv[]) {
                         SDL_DestroyTexture(player2LabelTexture);
                         player2LabelTexture = nullptr;
                     }
-                    if (player2LapTexture) {
-                        SDL_DestroyTexture(player2LapTexture);
-                        player2LapTexture = nullptr;
-                    }
-                    player2LastLaps = -1;
+                    for (size_t i = 0; i < carLastLaps.size(); ++i) carLastLaps[i] = -1;
                 }
             }
         }
@@ -197,20 +194,17 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        if (cars[player1Index].laps != player1LastLaps) {
-            if (player1LapTexture) SDL_DestroyTexture(player1LapTexture);
-            std::string text = "Lap " + std::to_string(cars[player1Index].laps);
-            player1LapTexture = makeLabelTexture(renderer, font, text.c_str(), cars[player1Index].getColor(), player1LapRect);
-            player1LapRect.x = windowWidth - 20 - player1LapRect.w;
-            player1LastLaps = cars[player1Index].laps;
-        }
-        if (player2Index >= 0 && cars[player2Index].laps != player2LastLaps) {
-            if (player2LapTexture) SDL_DestroyTexture(player2LapTexture);
-            std::string text = "Lap " + std::to_string(cars[player2Index].laps);
-            player2LapTexture = makeLabelTexture(renderer, font, text.c_str(), cars[player2Index].getColor(), player2LapRect);
-            player2LapRect.x = windowWidth - 20 - player2LapRect.w;
-            player2LapRect.y = player1LapRect.y + player1LapRect.h + 14;
-            player2LastLaps = cars[player2Index].laps;
+        // Rebuild any car's lap texture whose lap count changed (or that was reset
+        // due to a driver change). Textures are colored by the car's current color
+        // so player cars stand out with their bright hues.
+        for (size_t i = 0; i < cars.size(); ++i) {
+            if (cars[i].laps == carLastLaps[i]) continue;
+            if (carLapTextures[i]) SDL_DestroyTexture(carLapTextures[i]);
+            std::string text = std::string(cars[i].getName()) + ": Lap " +
+                                std::to_string(cars[i].laps);
+            carLapTextures[i] = makeLabelTexture(renderer, font, text.c_str(),
+                                                    cars[i].getColor(), carLapRects[i]);
+            carLastLaps[i] = cars[i].laps;
         }
 
         // Grass background.
@@ -218,6 +212,7 @@ int main(int argc, char* argv[]) {
         SDL_RenderClear(renderer);
 
         track.render(renderer);
+        startLine.render(renderer);
 
         for (const auto& rock : rocks) {
             rock.render(renderer);
@@ -265,23 +260,30 @@ int main(int argc, char* argv[]) {
             SDL_RenderFillRect(renderer, &background);
             SDL_RenderCopy(renderer, player2LabelTexture, nullptr, &player2LabelRect);
         }
-        if (player1LapTexture) {
-            SDL_Rect background{
-                player1LapRect.x - 8, player1LapRect.y - 6,
-                player1LapRect.w + 16, player1LapRect.h + 12
-            };
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
-            SDL_RenderFillRect(renderer, &background);
-            SDL_RenderCopy(renderer, player1LapTexture, nullptr, &player1LapRect);
-        }
-        if (player2LapTexture) {
-            SDL_Rect background{
-                player2LapRect.x - 8, player2LapRect.y - 6,
-                player2LapRect.w + 16, player2LapRect.h + 12
-            };
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
-            SDL_RenderFillRect(renderer, &background);
-            SDL_RenderCopy(renderer, player2LapTexture, nullptr, &player2LapRect);
+
+        // All-cars leaderboard on the right edge, sorted by lap count (and total
+        // distance as a tie-breaker) so the current leader appears on top.
+        {
+            std::vector<size_t> order(cars.size());
+            for (size_t i = 0; i < order.size(); ++i) order[i] = i;
+            std::sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+                if (cars[a].laps != cars[b].laps) return cars[a].laps > cars[b].laps;
+                return cars[a].distanceTraveled > cars[b].distanceTraveled;
+            });
+
+            int rowY = 20;
+            for (size_t idx : order) {
+                SDL_Texture* tex = carLapTextures[idx];
+                if (!tex) continue;
+                SDL_Rect& r = carLapRects[idx];
+                r.x = windowWidth - 20 - r.w;
+                r.y = rowY;
+                SDL_Rect background{ r.x - 8, r.y - 4, r.w + 16, r.h + 8 };
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
+                SDL_RenderFillRect(renderer, &background);
+                SDL_RenderCopy(renderer, tex, nullptr, &r);
+                rowY += r.h + 8;
+            }
         }
 
         if (raceFinished) {
@@ -308,8 +310,9 @@ int main(int argc, char* argv[]) {
 
     if (player1LabelTexture) SDL_DestroyTexture(player1LabelTexture);
     if (player2LabelTexture) SDL_DestroyTexture(player2LabelTexture);
-    if (player1LapTexture) SDL_DestroyTexture(player1LapTexture);
-    if (player2LapTexture) SDL_DestroyTexture(player2LapTexture);
+    for (SDL_Texture* tex : carLapTextures) {
+        if (tex) SDL_DestroyTexture(tex);
+    }
     if (winnerTexture) SDL_DestroyTexture(winnerTexture);
     if (winnerHintTexture) SDL_DestroyTexture(winnerHintTexture);
     engineSound.shutdown();

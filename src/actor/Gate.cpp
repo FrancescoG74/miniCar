@@ -1,8 +1,8 @@
-#include "Gate.h"
+#include "actor/Gate.h"
 
 #include <cmath>
 
-#include "Car.h"
+#include "actor/Car.h"
 #include "Track.h"
 
 Gate::Gate(float s_, float phaseOffset_, const Track& track, float trackHalfWidth_)

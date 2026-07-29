@@ -3,7 +3,7 @@
 #include <SDL2/SDL.h>
 #include <vector>
 
-#include "Actor.h"
+#include "actor/Actor.h"
 
 class Track;
 
@@ -38,6 +38,7 @@ public:
     // Identity fields (name, color, id, active) live on the Actor base class.
     float s = 0.0f;              // distance traveled along the track centerline
     float laneOffset = 0.0f;     // perpendicular offset from centerline (lane position)
+    float targetLaneOffset = 0.0f; // AI-only: lane the car is currently steering toward
     float speed = 0.0f;          // pixels per second
     int playerNumber = 0;        // 0 = AI, 1 = player 1 (WASD), 2 = player 2 (IJKL)
     float distanceTraveled = 0.0f; // cumulative distance since race start (never wraps)

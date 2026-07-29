@@ -1,10 +1,10 @@
-#include "Rock.h"
+#include "actor/Rock.h"
 
 #include <algorithm>
 #include <cmath>
 #include <random>
 
-#include "Car.h"
+#include "actor/Car.h"
 #include "Track.h"
 
 namespace {

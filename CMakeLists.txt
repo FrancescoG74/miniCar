@@ -12,10 +12,11 @@ add_executable(minicar
     src/Track.cpp
     src/Audio.cpp
     src/Setup.cpp
-    src/Car.cpp
-    src/Actor.cpp
-    src/Rock.cpp
-    src/Gate.cpp
+    src/actor/Car.cpp
+    src/actor/Actor.cpp
+    src/actor/Rock.cpp
+    src/actor/Gate.cpp
+    src/actor/StartLine.cpp
 )
 
 target_include_directories(minicar PRIVATE
