@@ -40,10 +40,8 @@ void CollisionSystem::carVsCar(std::vector<Car>& cars, const Config& cfg) {
                 b.s = wrapS(b.s - push, cfg.totalLength);
             }
 
-            a.speed = 0.0f;
-            b.speed = 0.0f;
-            a.recoveryTimer = Car::kRecoveryDuration;
-            b.recoveryTimer = Car::kRecoveryDuration;
+              a.applyCollision();
+              b.applyCollision();
         }
     }
 }
@@ -79,8 +77,7 @@ void CollisionSystem::carVsRock(std::vector<Car>& cars,
                 car.s = wrapS(car.s + push, cfg.totalLength);
             }
 
-            car.speed = 0.0f;
-            car.recoveryTimer = Car::kRecoveryDuration;
+            car.applyCollision();
         }
     }
 }
@@ -103,8 +100,7 @@ void CollisionSystem::carVsGate(std::vector<Car>& cars,
             } else {
                 car.s = wrapS(car.s + push, cfg.totalLength);
             }
-            car.speed = 0.0f;
-            car.recoveryTimer = Car::kRecoveryDuration;
+            car.applyCollision();
         }
     }
 }

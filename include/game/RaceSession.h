@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <random>
 #include <vector>
 
 #include "game/RaceTuning.h"
@@ -16,7 +17,8 @@ class Track;
 // text textures and rendering.
 class RaceSession {
 public:
-    RaceSession(const Track& track, float trackWidth, RaceTuning tuning, AiTuning aiTuning);
+    RaceSession(const Track& track, float trackWidth, RaceTuning tuning, AiTuning aiTuning,
+                std::uint32_t seed = std::random_device{}());
 
     void reset();
     void update(float dt, const Uint8* keys);
@@ -44,4 +46,5 @@ private:
     std::optional<std::size_t> m_player1Index;
     std::optional<std::size_t> m_player2Index;
     std::optional<std::size_t> m_winnerIndex;
+    std::mt19937 m_rng;
 };

@@ -40,8 +40,8 @@ void WorldRenderer::render(SDL_Renderer* renderer, const Track& track, const Sta
 
         SDL_SetTextureColorMod(carSprite.texture, car.getColor().r, car.getColor().g, car.getColor().b);
         SDL_Rect dst{
-            static_cast<int>(cx - carSprite.width / 2.0f),
-            static_cast<int>(cy - carSprite.height / 2.0f),
+            static_cast<int>(cx - static_cast<float>(carSprite.width) / 2.0f),
+            static_cast<int>(cy - static_cast<float>(carSprite.height) / 2.0f),
             carSprite.width,
             carSprite.height
         };
@@ -49,7 +49,8 @@ void WorldRenderer::render(SDL_Renderer* renderer, const Track& track, const Sta
         SDL_RenderCopyEx(renderer, carSprite.texture, nullptr, &dst, angleDeg, nullptr, SDL_FLIP_NONE);
 
         if (car.driver() != DriverKind::Ai) {
-            drawCircle(renderer, cx, cy, carSprite.height * 0.75f, SDL_Color{ 255, 255, 255, 255 });
+            drawCircle(renderer, cx, cy, static_cast<float>(carSprite.height) * 0.75f,
+                       SDL_Color{ 255, 255, 255, 255 });
         }
     }
 }

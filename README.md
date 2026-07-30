@@ -1,6 +1,6 @@
 # miniCar
 
-A tiny 2-player top-down racing game written in C++17 on top of SDL2. Ten cars
+A tiny 2-player top-down racing game written in C++17 on top of SDL2. Six cars
 drive around a stadium-shaped circuit with rocks, cyclically-opening gates and a
 synthesized engine drone. Any AI car can be taken over as Player 1 (WASD) or
 Player 2 (IJKL).
@@ -138,6 +138,16 @@ cmake -S . -B build -G Ninja -DMINICAR_BUILD_TESTS=OFF
 Run the headless gameplay unit tests with CTest:
 
 ```bash
+ctest --test-dir build --output-on-failure
+```
+
+For strict local checks, enable warnings as errors and runtime sanitizers:
+
+```bash
+cmake -S . -B build -G Ninja \
+  -DMINICAR_WARNINGS_AS_ERRORS=ON \
+  -DMINICAR_ENABLE_SANITIZERS=ON
+cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 

@@ -28,7 +28,7 @@ public:
     // Default no-op render; derived classes may override to draw themselves.
     // Kept virtual (rather than pure) so a caller can hold generic Actor*s and
     // safely call render() even on actors without a bespoke visual.
-    virtual void render(SDL_Renderer* renderer) const {}
+    virtual void render(SDL_Renderer*) const {}
 
 private:
     static int s_nextId;

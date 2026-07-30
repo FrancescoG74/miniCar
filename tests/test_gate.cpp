@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <cmath>
+#include <random>
 
 #include "Track.h"
 #include "actor/Gate.h"
@@ -9,16 +10,6 @@ Track makeTrack() {
     return Track(0.0f, 0.0f, 200.0f, 50.0f, 40.0f);
 }
 
-// Gate's initial open/closed phase is randomized 50/50; retry construction a
-// bounded number of times to deterministically exercise each branch.
-Gate makeGateWithState(const Track& track, bool wantClosed) {
-    for (int attempt = 0; attempt < 100; ++attempt) {
-        Gate gate(track.totalLength() * 0.25f, track, 20.0f);
-        if (gate.isClosed() == wantClosed) return gate;
-    }
-    FAIL("could not roll a gate in the requested state after 100 attempts");
-    return Gate(0.0f, track, 20.0f);
-}
 } // namespace
 
 TEST_CASE("Gate posts are placed trackHalfWidth apart from the centerline sample", "[gate]") {
@@ -43,32 +34,29 @@ TEST_CASE("Gate posts sit on opposite sides of the centerline", "[gate]") {
     REQUIRE(midY == Catch::Approx(pos.y).margin(0.01f));
 }
 
-TEST_CASE("Gate can be rolled into a closed initial state", "[gate]") {
+TEST_CASE("Gate has reproducible phase changes with a fixed seed", "[gate]") {
     Track track = makeTrack();
-    Gate gate = makeGateWithState(track, true);
-    REQUIRE(gate.isClosed());
-}
+    std::mt19937 rngA(1234);
+    std::mt19937 rngB(1234);
+    Gate gateA(10.0f, track, 20.0f, rngA);
+    Gate gateB(10.0f, track, 20.0f, rngB);
 
-TEST_CASE("Gate can be rolled into an open initial state", "[gate]") {
-    Track track = makeTrack();
-    Gate gate = makeGateWithState(track, false);
-    REQUIRE_FALSE(gate.isClosed());
-}
-
-TEST_CASE("Gate toggles open/closed state over enough elapsed time", "[gate]") {
-    Track track = makeTrack();
-    Gate gate(10.0f, track, 20.0f);
-    bool initial = gate.isClosed();
-
-    bool sawToggle = false;
-    for (int i = 0; i < 200; ++i) {
-        gate.update(0.25f);
-        if (gate.isClosed() != initial) {
-            sawToggle = true;
-            break;
-        }
+    REQUIRE(gateA.isClosed() == gateB.isClosed());
+    for (int i = 0; i < 100; ++i) {
+        gateA.update(0.25f);
+        gateB.update(0.25f);
+        REQUIRE(gateA.isClosed() == gateB.isClosed());
     }
-    REQUIRE(sawToggle);
+}
+
+TEST_CASE("Gate state can be explicitly controlled", "[gate]") {
+    Track track = makeTrack();
+    std::mt19937 rng(9876);
+    Gate gate(10.0f, track, 20.0f, rng);
+    gate.setClosed(true);
+    REQUIRE(gate.isClosed());
+    gate.setClosed(false);
+    REQUIRE_FALSE(gate.isClosed());
 }
 
 TEST_CASE("Gate::createInitialGates places two gates at 25% and 75% of the loop", "[gate]") {

@@ -15,6 +15,7 @@ add_executable(minicar_tests
 )
 
 target_link_libraries(minicar_tests PRIVATE minicar_core Catch2::Catch2WithMain)
+minicar_configure_quality(minicar_tests)
 
 include(Catch)
 catch_discover_tests(minicar_tests)

@@ -87,6 +87,27 @@ TEST_CASE("Car::update's first crossing of the line does not count as a lap", "[
     REQUIRE(cars[0].s == Catch::Approx(10.0f));
 }
 
+TEST_CASE("Car::update credits every completed lap in a large frame", "[car]") {
+    std::vector<Car> cars;
+    cars.emplace_back(10.0f, 0.0f, 100.0f, SDL_Color{ 0, 0, 0, 255 }, "Solo", 100.0f);
+
+    cars[0].update(2.5f, cars, 0, 100.0f, deterministicControls());
+
+    REQUIRE(cars[0].s == Catch::Approx(60.0f));
+    REQUIRE(cars[0].laps == 2);
+}
+
+TEST_CASE("Car::update ignores non-positive elapsed time", "[car]") {
+    std::vector<Car> cars;
+    cars.emplace_back(10.0f, 0.0f, 100.0f, SDL_Color{ 0, 0, 0, 255 }, "Solo", 100.0f);
+
+    cars[0].update(0.0f, cars, 0, 100.0f, deterministicControls());
+    cars[0].update(-1.0f, cars, 0, 100.0f, deterministicControls());
+
+    REQUIRE(cars[0].s == Catch::Approx(10.0f));
+    REQUIRE(cars[0].distanceTraveled == Catch::Approx(0.0f));
+}
+
 TEST_CASE("Car::createInitialGrid returns six cars staggered behind the start line", "[car]") {
     auto grid = Car::createInitialGrid(25.0f);
     REQUIRE(grid.size() == 6);

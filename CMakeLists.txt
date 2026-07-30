@@ -5,6 +5,30 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(MINICAR_BUILD_TESTS "Build the miniCar unit test suite" ON)
+option(MINICAR_ENABLE_WARNINGS "Enable compiler warnings" ON)
+option(MINICAR_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+option(MINICAR_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+
+function(minicar_configure_quality target)
+    if(MINICAR_ENABLE_WARNINGS)
+        if(MSVC)
+            target_compile_options(${target} PRIVATE /W4)
+            if(MINICAR_WARNINGS_AS_ERRORS)
+                target_compile_options(${target} PRIVATE /WX)
+            endif()
+        else()
+            target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion)
+            if(MINICAR_WARNINGS_AS_ERRORS)
+                target_compile_options(${target} PRIVATE -Werror)
+            endif()
+        endif()
+    endif()
+
+    if(MINICAR_ENABLE_SANITIZERS AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(${target} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+        target_link_options(${target} PRIVATE -fsanitize=address,undefined)
+    endif()
+endfunction()
 
 find_package(SDL2 REQUIRED)
 find_package(SDL2_ttf REQUIRED)
@@ -32,6 +56,7 @@ target_include_directories(minicar_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${SDL2_INCLUDE_DIRS}
 )
+minicar_configure_quality(minicar_core)
 
 if(TARGET SDL2::SDL2)
     target_link_libraries(minicar_core PUBLIC SDL2::SDL2)
@@ -57,6 +82,7 @@ target_include_directories(minicar PRIVATE
 )
 
 target_link_libraries(minicar PRIVATE minicar_core)
+minicar_configure_quality(minicar)
 
 # Optional: spoken-word countdown ("3", "2", "1", "Go") via espeak-ng, if its
 # runtime library can be found. Only the -dev package ships an unversioned

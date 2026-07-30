@@ -115,7 +115,7 @@ void UiSound::playBeep(float frequencyHz, float durationSeconds, float volume) {
     constexpr double kPi = 3.14159265358979323846;
     constexpr double kFadeSeconds = 0.01; // short fade in/out to avoid clicks
 
-    const int numSamples = static_cast<int>(m_sampleRate * durationSeconds);
+    const int numSamples = static_cast<int>(static_cast<float>(m_sampleRate) * durationSeconds);
     std::vector<Sint16> buffer(numSamples);
     for (int i = 0; i < numSamples; ++i) {
         double t = static_cast<double>(i) / m_sampleRate;

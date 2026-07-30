@@ -12,7 +12,7 @@ Track makeTrack() {
 
 TEST_CASE("RaceSession::reset populates cars/rocks/gates and assigns Player1", "[race_session]") {
     Track track = makeTrack();
-    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{});
+    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{}, 1);
     session.reset();
 
     REQUIRE(session.cars().size() == 6);
@@ -25,7 +25,7 @@ TEST_CASE("RaceSession::reset populates cars/rocks/gates and assigns Player1", "
 
 TEST_CASE("RaceSession::update moves at least one car forward", "[race_session]") {
     Track track = makeTrack();
-    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{});
+    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{}, 2);
     session.reset();
 
     float totalDistanceBefore = 0.0f;
@@ -41,7 +41,7 @@ TEST_CASE("RaceSession::update moves at least one car forward", "[race_session]"
 
 TEST_CASE("RaceSession::joinPlayer2 assigns a different car than Player1", "[race_session]") {
     Track track = makeTrack();
-    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{});
+    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{}, 3);
     session.reset();
 
     auto p2 = session.joinPlayer2();
@@ -52,7 +52,7 @@ TEST_CASE("RaceSession::joinPlayer2 assigns a different car than Player1", "[rac
 
 TEST_CASE("RaceSession::joinPlayer2 is a no-op once Player2 already joined", "[race_session]") {
     Track track = makeTrack();
-    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{});
+    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{}, 4);
     session.reset();
 
     REQUIRE(session.joinPlayer2().has_value());
@@ -62,7 +62,7 @@ TEST_CASE("RaceSession::joinPlayer2 is a no-op once Player2 already joined", "[r
 
 TEST_CASE("RaceSession::removePlayer2 clears Player2 and can be called again safely", "[race_session]") {
     Track track = makeTrack();
-    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{});
+    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{}, 5);
     session.reset();
     session.joinPlayer2();
 
@@ -76,7 +76,7 @@ TEST_CASE("RaceSession::tuning reflects the values passed at construction", "[ra
     RaceTuning tuning;
     tuning.lapsToWin = 3;
     tuning.maxCarSpeed = 200.0f;
-    RaceSession session(track, 40.0f, tuning, AiTuning{});
+    RaceSession session(track, 40.0f, tuning, AiTuning{}, 6);
 
     REQUIRE(session.tuning().lapsToWin == 3);
     REQUIRE(session.tuning().maxCarSpeed == Catch::Approx(200.0f));
@@ -86,7 +86,7 @@ TEST_CASE("RaceSession declares a winner once a car completes enough laps", "[ra
     Track track = makeTrack();
     RaceTuning tuning;
     tuning.lapsToWin = 1;
-    RaceSession session(track, 40.0f, tuning, AiTuning{});
+    RaceSession session(track, 40.0f, tuning, AiTuning{}, 7);
     session.reset();
 
     bool wonWithinBudget = false;
@@ -96,4 +96,18 @@ TEST_CASE("RaceSession declares a winner once a car completes enough laps", "[ra
     }
 
     REQUIRE(wonWithinBudget);
+}
+
+TEST_CASE("RaceSession freezes player assignment after a winner is declared", "[race_session]") {
+    Track track = makeTrack();
+    RaceTuning tuning;
+    tuning.lapsToWin = 0;
+    RaceSession session(track, 40.0f, tuning, AiTuning{}, 8);
+    session.reset();
+
+    session.update(0.1f, nullptr);
+
+    REQUIRE(session.winnerIndex().has_value());
+    REQUIRE_FALSE(session.joinPlayer2().has_value());
+    REQUIRE_FALSE(session.removePlayer2());
 }

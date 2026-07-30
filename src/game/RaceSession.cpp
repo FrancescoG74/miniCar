@@ -5,25 +5,28 @@
 #include "game/DriverAssignmentService.h"
 #include "game/RaceBuilder.h"
 
-RaceSession::RaceSession(const Track& track, float trackWidth, RaceTuning tuning, AiTuning aiTuning)
-    : m_track(track), m_trackWidth(trackWidth), m_tuning(tuning), m_aiTuning(aiTuning) {}
+RaceSession::RaceSession(const Track& track, float trackWidth, RaceTuning tuning, AiTuning aiTuning,
+                         std::uint32_t seed)
+    : m_track(track), m_trackWidth(trackWidth), m_tuning(tuning), m_aiTuning(aiTuning), m_rng(seed) {}
 
 void RaceSession::reset() {
     auto race = RaceBuilder{}
         .withGrid(m_aiTuning.homeLaneOffset)
         .withRocks()
         .withGates()
-        .build(m_track, m_trackWidth);
+          .build(m_track, m_trackWidth, m_rng);
     m_cars = std::move(race.cars);
     m_rocks = std::move(race.rocks);
     m_gates = std::move(race.gates);
 
-    m_player1Index = DriverAssignmentService::assignPlayer1(m_cars);
+    m_player1Index = DriverAssignmentService::assignPlayer1(m_cars, m_rng);
     m_player2Index.reset();
     m_winnerIndex.reset();
 }
 
 void RaceSession::update(float dt, const Uint8* keys) {
+    if (dt <= 0.0f || m_winnerIndex) return;
+
     for (auto& gate : m_gates) gate.update(dt);
 
     std::vector<float> blockedS;
@@ -63,7 +66,7 @@ void RaceSession::update(float dt, const Uint8* keys) {
 
 std::optional<std::size_t> RaceSession::joinPlayer2() {
     if (!m_player1Index || m_player2Index || m_winnerIndex) return std::nullopt;
-    m_player2Index = DriverAssignmentService::assignPlayer2(m_cars, *m_player1Index);
+    m_player2Index = DriverAssignmentService::assignPlayer2(m_cars, *m_player1Index, m_rng);
     return m_player2Index;
 }
 

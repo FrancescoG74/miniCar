@@ -1,6 +1,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <random>
 #include <vector>
 
 #include "actor/Car.h"
@@ -54,6 +55,7 @@ public:
     // Materializes everything requested. `track` and `trackWidth` come from the
     // Game; the same values already used to build the visible track.
     Race build(const Track& track, float trackWidth) const;
+    Race build(const Track& track, float trackWidth, std::mt19937& rng) const;
 
 private:
     bool m_wantGrid = false;

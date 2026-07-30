@@ -1,5 +1,6 @@
 #include <catch2/catch_all.hpp>
 #include <cmath>
+#include <random>
 #include <vector>
 
 #include "CollisionSystem.h"
@@ -54,6 +55,18 @@ TEST_CASE("CollisionSystem::carVsCar ignores cars overlapping in s but in differ
     REQUIRE(cars[1].speed == Catch::Approx(60.0f));
 }
 
+TEST_CASE("CollisionSystem::carVsCar resolves overlap across the track seam", "[collision]") {
+    std::vector<Car> cars;
+    cars.push_back(makeCar(98.0f, 0.0f, 50.0f));
+    cars.push_back(makeCar(2.0f, 0.0f, 60.0f));
+
+    CollisionSystem::Config cfg{ 100.0f, 10.0f, 16.0f };
+    CollisionSystem::carVsCar(cars, cfg);
+
+    REQUIRE(cars[0].speed == Catch::Approx(0.0f));
+    REQUIRE(cars[1].speed == Catch::Approx(0.0f));
+}
+
 TEST_CASE("CollisionSystem::carVsRock stops a car overlapping an active rock", "[collision]") {
     Track track(0.0f, 0.0f, 200.0f, 50.0f, 40.0f);
     std::vector<Car> cars;
@@ -87,13 +100,10 @@ TEST_CASE("CollisionSystem::carVsGate stops a car at a closed gate", "[collision
     std::vector<Car> cars;
     cars.push_back(makeCar(100.0f, 0.0f, 80.0f));
 
+    std::mt19937 rng(1);
     std::vector<Gate> gates;
-    for (int attempt = 0; attempt < 100; ++attempt) {
-        gates.clear();
-        gates.emplace_back(102.0f, track, 20.0f);
-        if (gates[0].isClosed()) break;
-    }
-    REQUIRE(gates[0].isClosed());
+    gates.emplace_back(102.0f, track, 20.0f, rng);
+    gates[0].setClosed(true);
 
     CollisionSystem::Config cfg{ 1000.0f, 30.0f, 16.0f };
     CollisionSystem::carVsGate(cars, gates, cfg);
@@ -107,13 +117,10 @@ TEST_CASE("CollisionSystem::carVsGate ignores an open gate", "[collision]") {
     std::vector<Car> cars;
     cars.push_back(makeCar(100.0f, 0.0f, 80.0f));
 
+    std::mt19937 rng(1);
     std::vector<Gate> gates;
-    for (int attempt = 0; attempt < 100; ++attempt) {
-        gates.clear();
-        gates.emplace_back(101.0f, track, 20.0f);
-        if (!gates[0].isClosed()) break;
-    }
-    REQUIRE_FALSE(gates[0].isClosed());
+    gates.emplace_back(101.0f, track, 20.0f, rng);
+    gates[0].setClosed(false);
 
     CollisionSystem::Config cfg{ 1000.0f, 30.0f, 16.0f };
     CollisionSystem::carVsGate(cars, gates, cfg);

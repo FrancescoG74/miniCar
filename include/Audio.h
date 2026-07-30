@@ -4,12 +4,14 @@
 #include <array>
 #include <atomic>
 
+#include "game/RaceConstants.h"
+
 // Synthesizes a simple looping engine drone for up to 6 cars using raw SDL audio
 // (no extra dependencies like SDL2_mixer). Each car's pitch/volume is driven by
 // a normalized speed value that can be updated from the main thread at any time.
 class EngineSound {
 public:
-    static constexpr int kMaxCars = 6;
+    static constexpr int kMaxCars = static_cast<int>(kInitialCarCount);
 
     EngineSound();
     ~EngineSound();

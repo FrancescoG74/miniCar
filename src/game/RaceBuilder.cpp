@@ -26,6 +26,11 @@ RaceBuilder& RaceBuilder::withGatesAtFractions(std::initializer_list<float> frac
 }
 
 RaceBuilder::Race RaceBuilder::build(const Track& track, float trackWidth) const {
+    std::mt19937 rng{ std::random_device{}() };
+    return build(track, trackWidth, rng);
+}
+
+RaceBuilder::Race RaceBuilder::build(const Track& track, float trackWidth, std::mt19937& rng) const {
     Race race;
 
     if (m_wantGrid) {
@@ -33,18 +38,18 @@ RaceBuilder::Race RaceBuilder::build(const Track& track, float trackWidth) const
     }
 
     if (m_wantRocks) {
-        race.rocks = Rock::createInitialRocks(track);
+        race.rocks = Rock::createInitialRocks(track, rng);
     }
 
     if (m_wantGates) {
         if (m_gateFractions.empty()) {
-            race.gates = Gate::createInitialGates(track, trackWidth);
+            race.gates = Gate::createInitialGates(track, trackWidth, rng);
         } else {
             const float L = track.totalLength();
             const float halfWidth = trackWidth / 2.0f;
             race.gates.reserve(m_gateFractions.size());
             for (float f : m_gateFractions) {
-                race.gates.emplace_back(L * f, track, halfWidth);
+                race.gates.emplace_back(L * f, track, halfWidth, rng);
             }
         }
     }

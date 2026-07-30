@@ -37,10 +37,10 @@ void CountdownState::update(Game& game, float dt) {
                                                        SDL_Color{ 255, 255, 255, 255 }, naturalRect);
         constexpr float kCountdownScale = 4.0f;
         game.countdownRect = SDL_Rect{
-            (game.windowWidth - static_cast<int>(naturalRect.w * kCountdownScale)) / 2,
-            (game.windowHeight - static_cast<int>(naturalRect.h * kCountdownScale)) / 2,
-            static_cast<int>(naturalRect.w * kCountdownScale),
-            static_cast<int>(naturalRect.h * kCountdownScale)
+            (game.windowWidth - static_cast<int>(static_cast<float>(naturalRect.w) * kCountdownScale)) / 2,
+            (game.windowHeight - static_cast<int>(static_cast<float>(naturalRect.h) * kCountdownScale)) / 2,
+            static_cast<int>(static_cast<float>(naturalRect.w) * kCountdownScale),
+            static_cast<int>(static_cast<float>(naturalRect.h) * kCountdownScale)
         };
         game.countdownLastDigit = digit;
 

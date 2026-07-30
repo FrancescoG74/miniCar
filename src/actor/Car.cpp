@@ -23,6 +23,8 @@ Car& Car::operator=(Car&&) noexcept = default;
 
 void Car::update(float dt, const std::vector<Car>& allCars, size_t selfIndex,
                   float totalLength, const CarControls& ctrl) {
+    if (dt <= 0.0f || totalLength <= 0.0f) return;
+
     if (m_input) {
         m_input->drive(*this, dt, allCars, selfIndex, totalLength, ctrl);
     }
@@ -56,6 +58,11 @@ void Car::update(float dt, const std::vector<Car>& allCars, size_t selfIndex,
     }
 }
 
+void Car::applyCollision() {
+    speed = 0.0f;
+    recoveryTimer = kRecoveryDuration;
+}
+
 void Car::setDriver(DriverKind driver) {
     m_driver = driver;
     switch (m_driver) {
@@ -79,7 +86,7 @@ std::vector<Car> Car::createInitialGrid(float laneOffset) {
     // them start sitting exactly on top of it. Built with emplace_back because
     // Car is move-only (owns its InputController via unique_ptr).
     std::vector<Car> grid;
-    grid.reserve(6);
+    grid.reserve(kInitialCarCount);
     grid.emplace_back(-45.0f,  -laneOffset, 90.0f,  SDL_Color{ 220, 40, 40, 255 },  "Red",    90.0f);
     grid.emplace_back(-45.0f,   laneOffset, 100.0f, SDL_Color{ 40, 90, 220, 255 },  "Blue",   100.0f);
     grid.emplace_back(-90.0f,  -laneOffset, 80.0f,  SDL_Color{ 40, 180, 60, 255 },  "Green",  80.0f);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL2/SDL.h>
+#include <random>
 #include <vector>
 
 #include "actor/Actor.h"
@@ -27,4 +28,5 @@ public:
     // ever collide with a rock -- AI cars can't change lanes and would otherwise get
     // stuck against an in-lane rock forever.
     static std::vector<Rock> createInitialRocks(const Track& track);
+    static std::vector<Rock> createInitialRocks(const Track& track, std::mt19937& rng);
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL2/SDL.h>
+#include <random>
 #include <vector>
 
 #include "actor/Actor.h"
@@ -34,18 +35,23 @@ public:
     float forwardY = 0.0f;
 
     Gate(float s, const Track& track, float trackHalfWidth);
+    Gate(float s, const Track& track, float trackHalfWidth, std::mt19937& rng);
 
     void update(float dt);
     void render(SDL_Renderer* renderer) const override;
 
     // True while the gate is currently blocking cars from passing.
     bool isClosed() const { return m_closed; }
+    void setClosed(bool closed) { m_closed = closed; }
 
     // Two gates placed on opposite sides of the circuit, each with independently
     // randomized open/close timing (see kMin/MaxClosedDuration, kMin/MaxOpenDuration).
     static std::vector<Gate> createInitialGates(const Track& track, float trackWidth);
+    static std::vector<Gate> createInitialGates(const Track& track, float trackWidth,
+                                                std::mt19937& rng);
 
 private:
     bool m_closed = true;      // current open/closed state
     float m_phaseTimer = 0.0f; // seconds remaining until the next random toggle
+    std::mt19937 m_rng;
 };

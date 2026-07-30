@@ -61,13 +61,16 @@ void Rock::render(SDL_Renderer* renderer) const {
 }
 
 std::vector<Rock> Rock::createInitialRocks(const Track& track) {
+    std::mt19937 rng{ std::random_device{}() };
+    return createInitialRocks(track, rng);
+}
+
+std::vector<Rock> Rock::createInitialRocks(const Track& track, std::mt19937& rng) {
     const float L = track.totalLength();
     // Rocks are placed randomly around the circuit at |laneOffset| >= 45 with size
     // <= 22 so their (size*0.55) collision hitboxes are always outside the AI cars'
     // fixed +/-25 lanes. Only players who steer wide can hit them; AI cars can't
     // change lanes and would otherwise get stuck against an in-lane rock forever.
-    std::random_device rd;
-    std::mt19937 rng(rd());
     std::uniform_int_distribution<int> countDist(5, 8);
     std::uniform_real_distribution<float> sizeDist(12.0f, 22.0f);
     std::uniform_real_distribution<float> lateralDist(45.0f, 50.0f);
@@ -80,7 +83,7 @@ std::vector<Rock> Rock::createInitialRocks(const Track& track) {
     std::vector<Rock> rocks;
     rocks.reserve(count);
     for (int i = 0; i < count; ++i) {
-        float baseFrac = 0.10f + static_cast<float>(i) / count * 0.85f;
+        float baseFrac = 0.10f + static_cast<float>(i) / static_cast<float>(count) * 0.85f;
         float frac = baseFrac + jitterDist(rng);
         frac = std::clamp(frac, 0.05f, 0.95f);
 

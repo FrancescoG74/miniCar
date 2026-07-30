@@ -6,6 +6,7 @@
 
 #include "SdlRaii.h"
 #include "actor/Actor.h"
+#include "game/RaceConstants.h"
 
 class InputController;
 class Track;
@@ -81,12 +82,14 @@ public:
     void update(float dt, const std::vector<Car>& allCars, size_t selfIndex,
                  float totalLength, const CarControls& ctrl);
 
+    void applyCollision();
+
     DriverKind driver() const { return m_driver; }
     void setDriver(DriverKind driver);
 
     // -- Static helpers for the whole race --------------------------------------
 
-    // Builds the fixed race grid (10 cars, five staggered rows of two lanes).
+    // Builds the fixed race grid (three staggered rows of two lanes).
     static std::vector<Car> createInitialGrid(float laneOffset);
 
     // Creates a simple white "car" sprite texture the caller can tint per-car.

@@ -1,4 +1,5 @@
 #include <catch2/catch_all.hpp>
+#include <random>
 #include <vector>
 
 #include "actor/Car.h"
@@ -17,7 +18,8 @@ std::vector<Car> makeCars(std::size_t count) {
 
 TEST_CASE("DriverAssignmentService::assignPlayer1 picks a valid index and sets Player1", "[driver_assignment]") {
     auto cars = makeCars(6);
-    std::size_t index = DriverAssignmentService::assignPlayer1(cars);
+    std::mt19937 rng(1);
+    std::size_t index = DriverAssignmentService::assignPlayer1(cars, rng);
 
     REQUIRE(index < cars.size());
     REQUIRE(cars[index].driver() == DriverKind::Player1);
@@ -25,8 +27,9 @@ TEST_CASE("DriverAssignmentService::assignPlayer1 picks a valid index and sets P
 
 TEST_CASE("DriverAssignmentService::assignPlayer2 never picks the Player1 index", "[driver_assignment]") {
     auto cars = makeCars(6);
-    std::size_t p1 = DriverAssignmentService::assignPlayer1(cars);
-    auto p2 = DriverAssignmentService::assignPlayer2(cars, p1);
+    std::mt19937 rng(2);
+    std::size_t p1 = DriverAssignmentService::assignPlayer1(cars, rng);
+    auto p2 = DriverAssignmentService::assignPlayer2(cars, p1, rng);
 
     REQUIRE(p2.has_value());
     REQUIRE(*p2 != p1);
@@ -35,17 +38,19 @@ TEST_CASE("DriverAssignmentService::assignPlayer2 never picks the Player1 index"
 
 TEST_CASE("DriverAssignmentService::assignPlayer2 returns nullopt with no AI cars left", "[driver_assignment]") {
     auto cars = makeCars(2);
+    std::mt19937 rng(3);
     cars[0].setDriver(DriverKind::Player1);
     cars[1].setDriver(DriverKind::Player2);
 
-    auto p2 = DriverAssignmentService::assignPlayer2(cars, 0);
+    auto p2 = DriverAssignmentService::assignPlayer2(cars, 0, rng);
     REQUIRE_FALSE(p2.has_value());
 }
 
 TEST_CASE("DriverAssignmentService::removePlayer2 reverts the car to AI", "[driver_assignment]") {
     auto cars = makeCars(6);
-    std::size_t p1 = DriverAssignmentService::assignPlayer1(cars);
-    auto p2 = DriverAssignmentService::assignPlayer2(cars, p1);
+    std::mt19937 rng(4);
+    std::size_t p1 = DriverAssignmentService::assignPlayer1(cars, rng);
+    auto p2 = DriverAssignmentService::assignPlayer2(cars, p1, rng);
     REQUIRE(p2.has_value());
 
     bool ok = DriverAssignmentService::removePlayer2(cars, *p2);
@@ -55,7 +60,8 @@ TEST_CASE("DriverAssignmentService::removePlayer2 reverts the car to AI", "[driv
 
 TEST_CASE("DriverAssignmentService::removePlayer2 fails for an index that isn't Player2", "[driver_assignment]") {
     auto cars = makeCars(6);
-    std::size_t p1 = DriverAssignmentService::assignPlayer1(cars);
+    std::mt19937 rng(5);
+    std::size_t p1 = DriverAssignmentService::assignPlayer1(cars, rng);
 
     bool ok = DriverAssignmentService::removePlayer2(cars, p1);
     REQUIRE_FALSE(ok);
