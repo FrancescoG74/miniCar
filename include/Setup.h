@@ -1,11 +1,12 @@
 #pragma once
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
 
-// RAII bundle for the window, renderer, HUD font and the underlying SDL / SDL_ttf
-// subsystems. The destructor cleans up whatever `initApp` managed to open, so
-// callers just declare an `AppWindow` on the stack and let it go out of scope --
+// RAII bundle for the window, renderer, HUD font and the underlying SDL / SDL_ttf /
+// SDL_image subsystems. The destructor cleans up whatever `initApp` managed to open,
+// so callers just declare an `AppWindow` on the stack and let it go out of scope --
 // no explicit `shutdownApp` needed.
 struct AppWindow {
     SDL_Window* window = nullptr;
@@ -15,6 +16,7 @@ struct AppWindow {
     int height = 0;
     bool sdlInitialized = false;
     bool ttfInitialized = false;
+    bool imgInitialized = false;
 
     AppWindow() = default;
     ~AppWindow();

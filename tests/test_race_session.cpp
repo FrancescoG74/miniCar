@@ -23,6 +23,29 @@ TEST_CASE("RaceSession::reset populates cars/rocks/gates and assigns Player1", "
     REQUIRE_FALSE(session.winnerIndex().has_value());
 }
 
+TEST_CASE("RaceSession::reset(0) leaves every car AI-controlled", "[race_session]") {
+    Track track = makeTrack();
+    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{}, 9);
+    session.reset(0);
+
+    REQUIRE_FALSE(session.player1Index().has_value());
+    REQUIRE_FALSE(session.player2Index().has_value());
+    for (const auto& car : session.cars()) {
+        REQUIRE(car.driver() == DriverKind::Ai);
+    }
+}
+
+TEST_CASE("RaceSession::reset(2) assigns both Player1 and Player2 up front", "[race_session]") {
+    Track track = makeTrack();
+    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{}, 10);
+    session.reset(2);
+
+    REQUIRE(session.player1Index().has_value());
+    REQUIRE(session.player2Index().has_value());
+    REQUIRE(*session.player1Index() != *session.player2Index());
+}
+
+
 TEST_CASE("RaceSession::update moves at least one car forward", "[race_session]") {
     Track track = makeTrack();
     RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{}, 2);
@@ -80,6 +103,23 @@ TEST_CASE("RaceSession::tuning reflects the values passed at construction", "[ra
 
     REQUIRE(session.tuning().lapsToWin == 3);
     REQUIRE(session.tuning().maxCarSpeed == Catch::Approx(200.0f));
+}
+
+TEST_CASE("RaceSession::setLapsToWin changes the winning condition after construction", "[race_session]") {
+    Track track = makeTrack();
+    RaceSession session(track, 40.0f, RaceTuning{}, AiTuning{}, 11);
+    session.setLapsToWin(1);
+    session.reset();
+
+    REQUIRE(session.tuning().lapsToWin == 1);
+
+    bool wonWithinBudget = false;
+    for (int i = 0; i < 5000 && !wonWithinBudget; ++i) {
+        session.update(0.05f, nullptr);
+        wonWithinBudget = session.winnerIndex().has_value();
+    }
+
+    REQUIRE(wonWithinBudget);
 }
 
 TEST_CASE("RaceSession declares a winner once a car completes enough laps", "[race_session]") {

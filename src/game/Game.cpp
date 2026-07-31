@@ -1,5 +1,6 @@
 #include "game/Game.h"
 
+#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
 #include <algorithm>
 #include <cmath>
@@ -9,6 +10,27 @@
 #include "game/GamePhases.h"
 #include "game/GameState.h"
 #include "game/WorldRenderer.h"
+
+namespace {
+
+// Loads the 5 rock sprite variants shipped in assets/. Missing/failed loads
+// leave that slot null; Rock::render falls back to the procedural polygon.
+std::array<SDL_TexturePtr, 5> loadRockTextures(SDL_Renderer* renderer) {
+    std::array<SDL_TexturePtr, 5> textures;
+    for (std::size_t i = 0; i < textures.size(); ++i) {
+        std::string path = std::string(MINICAR_ASSETS_DIR) + "/rock" + std::to_string(i + 1) + ".png";
+        SDL_Texture* texture = IMG_LoadTexture(renderer, path.c_str());
+        if (!texture) {
+            std::cerr << "IMG_LoadTexture failed for " << path << ": " << IMG_GetError() << std::endl;
+            continue;
+        }
+        SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+        textures[i] = SDL_TexturePtr(texture);
+    }
+    return textures;
+}
+
+} // namespace
 
 Game::Game() = default;
 Game::~Game() = default;
@@ -23,6 +45,7 @@ bool Game::init(int width, int height, const char* title) {
                                      kTrackStraight, kTrackRadius, kTrackWidth);
     startLine = std::make_unique<StartLine>(*track, kTrackWidth);
     carTexture = Car::createTexture(app.renderer, kCarWidth, kCarHeight);
+    rockTextures = loadRockTextures(app.renderer);
     m_raceTuning.laneLimit = kTrackWidth / 2.0f - 12.0f;
     m_raceTuning.carLength = static_cast<float>(kCarHeight);
     m_raceTuning.carWidth = static_cast<float>(kCarWidth);
@@ -34,7 +57,8 @@ bool Game::init(int width, int height, const char* title) {
     voiceAvailable = voice.init();
     announcer = Announcer::create(&voice, &uiSound, voiceAvailable);
 
-    resetRace();
+    raceSetup.laps = m_raceTuning.lapsToWin;
+    showMenu();
     return true;
 }
 
@@ -68,7 +92,12 @@ void Game::applyPendingState() {
     if (m_state) m_state->onEnter(*this);
 }
 
-void Game::resetRace() {
+void Game::showMenu() {
+    transitionTo(std::make_unique<MenuState>());
+    applyPendingState();
+}
+
+void Game::startRace() {
     // Wipe any HUD textures that reference the previous race.
     player1LabelTexture.reset();
     player2LabelTexture.reset();
@@ -77,10 +106,28 @@ void Game::resetRace() {
     winnerHintTexture.reset();
     countdownTexture.reset();
 
-    m_race->reset();
-    const auto player1Index = *m_race->player1Index();
-    std::cout << "Player 1 controls the " << m_race->cars()[player1Index].getName() << " car (W/A/S/D).\n"
-              << "Press '2' to add Player 2, '1' to remove them." << std::endl;
+    m_raceTuning.lapsToWin = std::clamp(raceSetup.laps, 1, 99);
+    m_race->setLapsToWin(m_raceTuning.lapsToWin);
+    m_race->reset(std::clamp(raceSetup.playerCount, 0, 2));
+
+    // Custom names live in `raceSetup` for the rest of the race's lifetime, so
+    // the char* Actor::name stashes below stay valid until the next reset.
+    if (const auto& player1Index = m_race->player1Index()) {
+        if (!raceSetup.player1Name.empty()) {
+            m_race->cars()[*player1Index].setName(raceSetup.player1Name.c_str());
+        }
+        std::cout << "Player 1 controls the " << m_race->cars()[*player1Index].getName()
+                  << " car (W/A/S/D).\n";
+    }
+    if (const auto& player2Index = m_race->player2Index()) {
+        if (!raceSetup.player2Name.empty()) {
+            m_race->cars()[*player2Index].setName(raceSetup.player2Name.c_str());
+        }
+        std::cout << "Player 2 controls the " << m_race->cars()[*player2Index].getName()
+                  << " car (I/J/K/L).\n";
+    } else if (m_race->player1Index()) {
+        std::cout << "Press '2' to add Player 2, '1' to remove them." << std::endl;
+    }
     updateWindowTitle();
 
     rebuildPlayerLabels();
@@ -153,16 +200,17 @@ void Game::pollEvents() {
             continue;
         }
 
-        if (event.type == SDL_KEYDOWN) {
+        if (event.type == SDL_KEYDOWN && !(m_state && m_state->ownsInput())) {
             SDL_Keycode k = event.key.keysym.sym;
 
-            // Universal keys handled by Game, not by any state.
+            // Universal keys handled by Game, not by any state. Suppressed
+            // while a state (e.g. the menu) wants to own all keyboard input.
             if (k == SDLK_ESCAPE) {
                 m_running = false;
                 continue;
             }
             if (k == SDLK_r) {
-                resetRace();
+                showMenu();
                 continue;
             }
 
@@ -205,13 +253,19 @@ void Game::renderFrame() {
     SDL_SetRenderDrawColor(renderer, 34, 120, 50, 255);
     SDL_RenderClear(renderer);
 
-    WorldRenderer::CarSprite carSprite{ carTexture.get(), kCarWidth, kCarHeight };
-    WorldRenderer::render(renderer, *track, *startLine, *m_race, carSprite);
+    if (!m_state || m_state->rendersWorld()) {
+        WorldRenderer::CarSprite carSprite{ carTexture.get(), kCarWidth, kCarHeight };
+        std::array<SDL_Texture*, 5> rockSprites{
+            rockTextures[0].get(), rockTextures[1].get(), rockTextures[2].get(),
+            rockTextures[3].get(), rockTextures[4].get(),
+        };
+        WorldRenderer::render(renderer, *track, *startLine, *m_race, carSprite, rockSprites);
 
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    HudRenderer::renderLabel(renderer, player1LabelTexture.get(), player1LabelRect);
-    HudRenderer::renderLabel(renderer, player2LabelTexture.get(), player2LabelRect);
-    HudRenderer::renderLeaderboard(renderer, windowWidth, m_race->cars(), carHud);
+        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+        HudRenderer::renderLabel(renderer, player1LabelTexture.get(), player1LabelRect);
+        HudRenderer::renderLabel(renderer, player2LabelTexture.get(), player2LabelRect);
+        HudRenderer::renderLeaderboard(renderer, windowWidth, m_race->cars(), carHud);
+    }
 
     if (m_state) m_state->renderOverlay(*this);
 

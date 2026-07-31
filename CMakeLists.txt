@@ -32,6 +32,7 @@ endfunction()
 
 find_package(SDL2 REQUIRED)
 find_package(SDL2_ttf REQUIRED)
+find_package(SDL2_image REQUIRED)
 
 # Pure gameplay logic: track math, physics, collisions, driver strategies and
 # the race domain model. Deliberately excludes anything that touches audio
@@ -40,6 +41,7 @@ find_package(SDL2_ttf REQUIRED)
 add_library(minicar_core STATIC
     src/Track.cpp
     src/CollisionSystem.cpp
+    src/Sprite.cpp
     src/actor/Actor.cpp
     src/actor/Car.cpp
     src/actor/Rock.cpp
@@ -121,6 +123,16 @@ if(TARGET SDL2_ttf::SDL2_ttf)
 else()
     target_link_libraries(minicar PRIVATE ${SDL2_TTF_LIBRARIES})
 endif()
+
+if(TARGET SDL2_image::SDL2_image)
+    target_link_libraries(minicar PRIVATE SDL2_image::SDL2_image)
+else()
+    target_link_libraries(minicar PRIVATE ${SDL2_IMAGE_LIBRARIES})
+endif()
+
+# Absolute path to assets/ baked in at build time so the game finds its sprite
+# files regardless of the working directory the executable is launched from.
+target_compile_definitions(minicar PRIVATE MINICAR_ASSETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets")
 
 if(MINICAR_BUILD_TESTS)
     include(CTest)

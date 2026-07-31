@@ -17,9 +17,9 @@ constexpr float kRadiusJitter[kSides] = {
 
 } // namespace
 
-Rock::Rock(float s_, float laneOffset_, const Track& track, float size_)
+Rock::Rock(float s_, float laneOffset_, const Track& track, float size_, int variant_)
     : Actor("Rock", SDL_Color{ 110, 100, 92, 255 }),
-       s(s_), laneOffset(laneOffset_), size(size_) {
+       s(s_), laneOffset(laneOffset_), size(size_), variant(variant_) {
     TrackPoint p = track.sample(s);
     float perpX = -std::sin(p.angle);
     float perpY = std::cos(p.angle);
@@ -27,9 +27,32 @@ Rock::Rock(float s_, float laneOffset_, const Track& track, float size_)
 }
 
 void Rock::render(SDL_Renderer* renderer) const {
+    render(renderer, nullptr);
+}
+
+void Rock::render(SDL_Renderer* renderer, SDL_Texture* texture) const {
     if (!active) return;
 
     const SDL_FPoint& pos = getPosition();
+
+    if (texture) {
+        int texW = 0;
+        int texH = 0;
+        SDL_QueryTexture(texture, nullptr, nullptr, &texW, &texH);
+        // Scale so the larger image dimension matches the rock's collision diameter,
+        // keeping the sprite's aspect ratio instead of stretching it into a square.
+        float scale = (size * 2.0f) / static_cast<float>(std::max(texW, texH));
+        int dstW = static_cast<int>(static_cast<float>(texW) * scale);
+        int dstH = static_cast<int>(static_cast<float>(texH) * scale);
+        SDL_Rect dst{
+            static_cast<int>(pos.x) - dstW / 2,
+            static_cast<int>(pos.y) - dstH / 2,
+            dstW, dstH
+        };
+        SDL_RenderCopy(renderer, texture, nullptr, &dst);
+        return;
+    }
+
     SDL_Vertex verts[kSides + 1];
     verts[0].position = pos;
     verts[0].color = getColor();
@@ -76,6 +99,7 @@ std::vector<Rock> Rock::createInitialRocks(const Track& track, std::mt19937& rng
     std::uniform_real_distribution<float> lateralDist(45.0f, 50.0f);
     std::uniform_int_distribution<int> sideDist(0, 1); // 0 = left of centerline, 1 = right
     std::uniform_real_distribution<float> jitterDist(-0.03f, 0.03f);
+    std::uniform_int_distribution<int> variantDist(0, 4); // 5 available rock sprite images
 
     const int count = countDist(rng);
     // Space rocks roughly evenly around the circuit with a small random jitter so
@@ -90,7 +114,7 @@ std::vector<Rock> Rock::createInitialRocks(const Track& track, std::mt19937& rng
         float lateral = lateralDist(rng);
         if (sideDist(rng) == 0) lateral = -lateral;
 
-        rocks.emplace_back(L * frac, lateral, track, sizeDist(rng));
+        rocks.emplace_back(L * frac, lateral, track, sizeDist(rng), variantDist(rng));
     }
     return rocks;
 }

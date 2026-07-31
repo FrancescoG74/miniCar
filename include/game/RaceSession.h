@@ -20,17 +20,22 @@ public:
     RaceSession(const Track& track, float trackWidth, RaceTuning tuning, AiTuning aiTuning,
                 std::uint32_t seed = std::random_device{}());
 
-    void reset();
+    // initialPlayers selects how many human drivers (0-2) are assigned before
+    // the race starts; extra slots stay AI-controlled until joinPlayer2().
+    void reset(int initialPlayers = 1);
     void update(float dt, const Uint8* keys);
 
     std::optional<std::size_t> joinPlayer2();
     bool removePlayer2();
 
     const RaceTuning& tuning() const { return m_tuning; }
+    // Applied immediately; takes effect on the next lap-count check in update().
+    void setLapsToWin(int laps) { m_tuning.lapsToWin = laps; }
     const std::optional<std::size_t>& player1Index() const { return m_player1Index; }
     const std::optional<std::size_t>& player2Index() const { return m_player2Index; }
     const std::optional<std::size_t>& winnerIndex() const { return m_winnerIndex; }
 
+    std::vector<Car>& cars() { return m_cars; }
     const std::vector<Car>& cars() const { return m_cars; }
     const std::vector<Rock>& rocks() const { return m_rocks; }
     const std::vector<Gate>& gates() const { return m_gates; }

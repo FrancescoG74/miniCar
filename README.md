@@ -50,26 +50,40 @@ actor, resolves collisions, then renders the world and the HUD.
 | `AppWindow` / `initApp` | [include/Setup.h](include/Setup.h) | Bundles window/renderer/font and centralizes SDL init and shutdown. |
 | `Game` | [include/game/Game.h](include/game/Game.h) | Top-level owner of platform resources, renderers, audio, the current state, and the current `RaceSession`. |
 | `RaceSession` | [include/game/RaceSession.h](include/game/RaceSession.h) | Headless race simulation: creates and updates the race world, applies collisions, driver assignment, and determines the winner. |
-| `GameState` | [include/game/GameState.h](include/game/GameState.h) | State interface implemented by countdown, racing, and finished phases. |
+| `GameState` | [include/game/GameState.h](include/game/GameState.h) | State interface implemented by the setup menu, countdown, racing, and finished phases. |
+| `MenuState` | [include/game/GamePhases.h](include/game/GamePhases.h) | Pre-race setup screen: player count (0-2), player names, laps to win. Shown at startup and on every `R` restart. |
 
 ### Frame flow
 
 ```mermaid
 flowchart LR
-  Events[SDL events + keyboard] --> GameState[Current GameState]
+  Menu[MenuState: players/names/laps] -->|Enter| Countdown
+  Countdown --> Events[SDL events + keyboard]
+  Events --> GameState[Current GameState]
   GameState --> RaceUpdate[RaceSession::update]
   RaceUpdate --> Cars[Car input strategy + movement]
   Cars --> Collisions[Car/Car, Car/Rock, Car/Gate resolvers]
   Collisions --> Audio[EngineSound::setCarSpeed]
   Audio --> Render[WorldRenderer + HudRenderer]
   Render --> Events
+  Events -->|R| Menu
 ```
 
 ### Controls
 
+#### Setup menu (shown at startup and every restart)
+
+- **Up/Down** — select a field (players, player 1/2 name, laps to win).
+- **Left/Right** — change the selected field's value (players: 0-2, laps: 1-20).
+- **Type / Backspace** — edit the focused player name (up to 14 characters).
+- **Enter** — start the race with the current selections.
+- **Esc** — quit.
+
+#### In-race
+
 - **Player 1** — `W` / `A` / `S` / `D` to accelerate, steer left, brake, steer right.
 - **Player 2** — `I` / `J` / `K` / `L` (joins/leaves at runtime via the assign helpers in `Car`).
-- **Restart** — `R` resets the race (new car grid, rocks, gates and player assignment).
+- **Restart** — `R` returns to the setup menu (prefilled with the last selections).
 - **Quit** — close the window or press `Esc`.
 
 ## Build

@@ -9,6 +9,201 @@
 #include "game/Game.h"
 
 // ==========================================================================
+// MenuState
+// ==========================================================================
+
+void MenuState::onEnter(Game& game) {
+    SDL_StartTextInput();
+    m_focus = Field::Players;
+    m_dirty = true;
+    m_lapsFresh = true;
+
+    m_titleTexture = game.makeLabelTexture("miniCar - Race Setup",
+                                            SDL_Color{ 255, 255, 255, 255 }, m_titleRect);
+    m_instructionsTexture = game.makeLabelTexture(
+        "Up/Down: select field    Left/Right or digits: change laps/players    "
+        "Type: edit name    Enter: start    Esc: quit",
+        SDL_Color{ 200, 200, 200, 255 }, m_instructionsRect);
+}
+
+void MenuState::onExit(Game& /*game*/) {
+    SDL_StopTextInput();
+}
+
+void MenuState::moveFocus(Game& game, int direction) {
+    int index = static_cast<int>(m_focus);
+    for (int step = 0; step < kFieldCount; ++step) {
+        index = (index + direction + kFieldCount) % kFieldCount;
+        auto candidate = static_cast<Field>(index);
+        // Name fields for AI-controlled slots aren't editable; skip over them.
+        if (candidate == Field::Player1Name && game.raceSetup.playerCount < 1) continue;
+        if (candidate == Field::Player2Name && game.raceSetup.playerCount < 2) continue;
+        m_focus = candidate;
+        if (candidate == Field::Laps) m_lapsFresh = true;
+        break;
+    }
+    m_dirty = true;
+}
+
+void MenuState::adjustValue(Game& game, int direction) {
+    switch (m_focus) {
+    case Field::Players:
+        game.raceSetup.playerCount = std::clamp(game.raceSetup.playerCount + direction, 0, 2);
+        break;
+    case Field::Laps:
+        game.raceSetup.laps = std::clamp(game.raceSetup.laps + direction, kMinLaps, kMaxLaps);
+        m_lapsFresh = true; // next typed digit should replace, not append to, this value
+        break;
+    default:
+        break;
+    }
+    m_dirty = true;
+}
+
+void MenuState::appendText(Game& game, const char* utf8Text) {
+    if (m_focus == Field::Laps) {
+        // Only single ASCII digits are meaningful for a lap count.
+        if (utf8Text[0] < '0' || utf8Text[0] > '9' || utf8Text[1] != '\0') return;
+        int digit = utf8Text[0] - '0';
+        int typed = m_lapsFresh ? digit : game.raceSetup.laps * 10 + digit;
+        game.raceSetup.laps = std::clamp(typed, kMinLaps, kMaxLaps);
+        m_lapsFresh = false;
+        m_dirty = true;
+        return;
+    }
+
+    std::string* target = nullptr;
+    if (m_focus == Field::Player1Name && game.raceSetup.playerCount >= 1) {
+        target = &game.raceSetup.player1Name;
+    } else if (m_focus == Field::Player2Name && game.raceSetup.playerCount >= 2) {
+        target = &game.raceSetup.player2Name;
+    }
+    if (!target || target->size() >= kMaxNameLength) return;
+
+    *target += utf8Text;
+    m_dirty = true;
+}
+
+void MenuState::backspace(Game& game) {
+    if (m_focus == Field::Laps) {
+        game.raceSetup.laps = std::max(kMinLaps, game.raceSetup.laps / 10);
+        m_lapsFresh = true;
+        m_dirty = true;
+        return;
+    }
+
+    std::string* target = nullptr;
+    if (m_focus == Field::Player1Name) target = &game.raceSetup.player1Name;
+    else if (m_focus == Field::Player2Name) target = &game.raceSetup.player2Name;
+    if (!target || target->empty()) return;
+
+    target->pop_back();
+    m_dirty = true;
+}
+
+void MenuState::handleEvent(Game& game, const SDL_Event& event) {
+    if (event.type == SDL_TEXTINPUT) {
+        appendText(game, event.text.text);
+        return;
+    }
+    if (event.type != SDL_KEYDOWN) return;
+
+    switch (event.key.keysym.sym) {
+    case SDLK_ESCAPE:
+        game.quit();
+        break;
+    case SDLK_UP:
+        moveFocus(game, -1);
+        break;
+    case SDLK_DOWN:
+    case SDLK_TAB:
+        moveFocus(game, 1);
+        break;
+    case SDLK_LEFT:
+    case SDLK_MINUS:
+    case SDLK_KP_MINUS:
+        adjustValue(game, -1);
+        break;
+    case SDLK_RIGHT:
+    case SDLK_PLUS:
+    case SDLK_EQUALS:
+    case SDLK_KP_PLUS:
+        adjustValue(game, 1);
+        break;
+    case SDLK_BACKSPACE:
+        backspace(game);
+        break;
+    case SDLK_RETURN:
+    case SDLK_KP_ENTER:
+        game.startRace();
+        break;
+    default:
+        break;
+    }
+}
+
+void MenuState::update(Game& game, float /*dt*/) {
+    if (!m_dirty) return;
+    rebuildTextures(game);
+    m_dirty = false;
+}
+
+void MenuState::rebuildTextures(Game& game) {
+    auto buildLine = [&](Field field, const std::string& text) {
+        bool focused = (m_focus == field);
+        SDL_Color color = focused ? SDL_Color{ 255, 220, 60, 255 } : SDL_Color{ 255, 255, 255, 255 };
+        std::string prefixed = (focused ? "> " : "  ") + text;
+        Line& line = m_lines[static_cast<int>(field)];
+        line.texture = game.makeLabelTexture(prefixed.c_str(), color, line.rect);
+    };
+
+    buildLine(Field::Players,
+              "Players: " + std::to_string(game.raceSetup.playerCount) +
+                  "  (0 = all AI, 2 = two humans)");
+
+    buildLine(Field::Player1Name,
+              "Player 1 name: " + (game.raceSetup.playerCount >= 1
+                                       ? (game.raceSetup.player1Name.empty() ? "(auto)"
+                                                                              : game.raceSetup.player1Name)
+                                       : std::string("(AI controlled)")));
+
+    buildLine(Field::Player2Name,
+              "Player 2 name: " + (game.raceSetup.playerCount >= 2
+                                       ? (game.raceSetup.player2Name.empty() ? "(auto)"
+                                                                              : game.raceSetup.player2Name)
+                                       : std::string("(AI controlled)")));
+
+    buildLine(Field::Laps, "Laps to win: " + std::to_string(game.raceSetup.laps));
+}
+
+void MenuState::renderOverlay(Game& game) {
+    SDL_Renderer* renderer = game.app.renderer;
+
+    SDL_Rect full{ 0, 0, game.windowWidth, game.windowHeight };
+    SDL_SetRenderDrawColor(renderer, 24, 28, 36, 255);
+    SDL_RenderFillRect(renderer, &full);
+
+    auto drawCentered = [&](SDL_Texture* texture, SDL_Rect& rect, int lineY) {
+        if (!texture) return;
+        rect.x = (game.windowWidth - rect.w) / 2;
+        rect.y = lineY;
+        SDL_RenderCopy(renderer, texture, nullptr, &rect);
+    };
+
+    int y = game.windowHeight / 2 - 160;
+    drawCentered(m_titleTexture.get(), m_titleRect, y);
+    y += m_titleRect.h + 40;
+
+    for (int i = 0; i < kFieldCount; ++i) {
+        drawCentered(m_lines[i].texture.get(), m_lines[i].rect, y);
+        y += m_lines[i].rect.h + 20;
+    }
+
+    y += 20;
+    drawCentered(m_instructionsTexture.get(), m_instructionsRect, y);
+}
+
+// ==========================================================================
 // CountdownState
 // ==========================================================================
 

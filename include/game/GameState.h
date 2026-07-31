@@ -24,4 +24,12 @@ public:
 
     // Draws state-specific overlays on top of the shared world+HUD render.
     virtual void renderOverlay(Game& /*game*/) {}
+
+    // False for full-screen states (e.g. the setup menu) that replace the
+    // world/HUD render entirely instead of overlaying it.
+    virtual bool rendersWorld() const { return true; }
+
+    // True while this state wants to own all keyboard input (e.g. typing into
+    // text fields), suppressing Game's universal Esc/R/1/2 shortcuts.
+    virtual bool ownsInput() const { return false; }
 };

@@ -2,6 +2,8 @@
 
 #include <SDL2/SDL.h>
 
+#include "Sprite.h"
+
 // Base class for anything that lives in the game world (cars for now; obstacles,
 // power-ups, checkpoints, etc. can plug in later). Keeps the shared identity /
 // state fields common to all game objects and gives them a polymorphic render hook.
@@ -25,10 +27,14 @@ public:
     const SDL_FPoint& getPosition() const { return position; }
     void setPosition(SDL_FPoint p) { position = p; }
 
-    // Default no-op render; derived classes may override to draw themselves.
-    // Kept virtual (rather than pure) so a caller can hold generic Actor*s and
-    // safely call render() even on actors without a bespoke visual.
-    virtual void render(SDL_Renderer*) const {}
+    // Optional image/animation attached to this actor (see Sprite). Unset by
+    // default, in which case the default render() below stays a no-op.
+    Sprite sprite;
+
+    // Default render draws the attached sprite (no-op if it has no texture).
+    // Derived classes with bespoke visuals (procedural polygons, etc.) override
+    // this instead of using `sprite`.
+    virtual void render(SDL_Renderer* renderer) const { sprite.render(renderer, position); }
 
 private:
     static int s_nextId;

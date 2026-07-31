@@ -6,6 +6,7 @@ AppWindow::~AppWindow() {
     if (font) TTF_CloseFont(font);
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
+    if (imgInitialized) IMG_Quit();
     if (ttfInitialized) TTF_Quit();
     if (sdlInitialized) SDL_Quit();
 }
@@ -22,6 +23,13 @@ bool initApp(AppWindow& app, int width, int height, const char* title) {
                    << TTF_GetError() << std::endl;
     } else {
         app.ttfInitialized = true;
+    }
+
+    if ((IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG) == 0) {
+        std::cerr << "IMG_Init failed (continuing without sprite textures): "
+                   << IMG_GetError() << std::endl;
+    } else {
+        app.imgInitialized = true;
     }
 
     app.window = SDL_CreateWindow(

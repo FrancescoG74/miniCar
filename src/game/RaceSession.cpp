@@ -9,19 +9,26 @@ RaceSession::RaceSession(const Track& track, float trackWidth, RaceTuning tuning
                          std::uint32_t seed)
     : m_track(track), m_trackWidth(trackWidth), m_tuning(tuning), m_aiTuning(aiTuning), m_rng(seed) {}
 
-void RaceSession::reset() {
+void RaceSession::reset(int initialPlayers) {
     auto race = RaceBuilder{}
         .withGrid(m_aiTuning.homeLaneOffset)
         .withRocks()
         .withGates()
-          .build(m_track, m_trackWidth, m_rng);
+        .build(m_track, m_trackWidth, m_rng);
     m_cars = std::move(race.cars);
     m_rocks = std::move(race.rocks);
     m_gates = std::move(race.gates);
 
-    m_player1Index = DriverAssignmentService::assignPlayer1(m_cars, m_rng);
+    m_player1Index.reset();
     m_player2Index.reset();
     m_winnerIndex.reset();
+
+    if (initialPlayers >= 1) {
+        m_player1Index = DriverAssignmentService::assignPlayer1(m_cars, m_rng);
+    }
+    if (initialPlayers >= 2 && m_player1Index) {
+        m_player2Index = DriverAssignmentService::assignPlayer2(m_cars, *m_player1Index, m_rng);
+    }
 }
 
 void RaceSession::update(float dt, const Uint8* keys) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL2/SDL.h>
+#include <array>
 
 class RaceSession;
 class Track;
@@ -19,6 +20,11 @@ public:
         int height = 0;
     };
 
+    // Textures indexed by Rock::variant; a null entry falls back to Rock's
+    // procedural polygon draw.
+    using RockSprites = std::array<SDL_Texture*, 5>;
+
     static void render(SDL_Renderer* renderer, const Track& track, const StartLine& startLine,
-                        const RaceSession& race, const CarSprite& carSprite);
+                        const RaceSession& race, const CarSprite& carSprite,
+                        const RockSprites& rockSprites);
 };

@@ -1,7 +1,9 @@
 #pragma once
 
 #include <SDL2/SDL.h>
+#include <array>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "Audio.h"
@@ -16,6 +18,15 @@
 #include "game/RaceSession.h"
 
 class GameState;
+
+// Player/lap selections made in the setup menu, applied by Game::startRace().
+// Names are optional; an empty name keeps the car's auto-assigned color name.
+struct RaceSetupOptions {
+    int playerCount = 1; // 0 = all AI, 1 = Player1 only, 2 = Player1 + Player2
+    std::string player1Name;
+    std::string player2Name;
+    int laps = 5;
+};
 
 // Top-level owner of window/renderer/audio/world/HUD, plus the current
 // GameState. `run()` drives the fixed init -> loop -> shutdown lifecycle.
@@ -55,9 +66,13 @@ public:
     void quit() { m_running = false; }
     GameState* state() { return m_state.get(); }
 
-    // Wipes and rebuilds the per-race world (cars, rocks, gates, player
-    // assignment, HUD state) and reenters the Countdown state.
-    void resetRace();
+    // Transitions to the setup menu without touching the current race world
+    // (MenuState doesn't render it, so it can stay stale behind the menu).
+    void showMenu();
+
+    // Wipes and rebuilds the per-race world using `raceSetup` (cars, rocks,
+    // gates, player assignment, HUD state) and reenters the Countdown state.
+    void startRace();
 
     RaceSession& race() { return *m_race; }
     const RaceSession& race() const { return *m_race; }
@@ -79,6 +94,7 @@ public:
     std::unique_ptr<Track> track;
     std::unique_ptr<StartLine> startLine;
     SDL_TexturePtr carTexture;
+    std::array<SDL_TexturePtr, 5> rockTextures; // indexed by Rock::variant
 
     // Player 1/2 labels in the top-left corner.
     SDL_TexturePtr player1LabelTexture;
@@ -108,6 +124,9 @@ public:
     Voice voice;
     bool voiceAvailable = false;
     std::unique_ptr<Announcer> announcer;
+
+    // Menu selections; edited by MenuState, consumed by startRace().
+    RaceSetupOptions raceSetup;
 
 private:
     void pollEvents();

@@ -1,6 +1,7 @@
 #include "game/WorldRenderer.h"
 
 #include <cmath>
+#include <cstddef>
 
 #include "Track.h"
 #include "actor/Car.h"
@@ -26,11 +27,17 @@ void drawCircle(SDL_Renderer* renderer, float cx, float cy, float radius, SDL_Co
 } // namespace
 
 void WorldRenderer::render(SDL_Renderer* renderer, const Track& track, const StartLine& startLine,
-                           const RaceSession& race, const CarSprite& carSprite) {
+                           const RaceSession& race, const CarSprite& carSprite,
+                           const RockSprites& rockSprites) {
     track.render(renderer);
     startLine.render(renderer);
 
-    for (const auto& rock : race.rocks()) rock.render(renderer);
+    for (const auto& rock : race.rocks()) {
+        SDL_Texture* texture = (rock.variant >= 0 && static_cast<std::size_t>(rock.variant) < rockSprites.size())
+            ? rockSprites[static_cast<std::size_t>(rock.variant)]
+            : nullptr;
+        rock.render(renderer, texture);
+    }
     for (const auto& gate : race.gates()) gate.render(renderer);
 
     for (const auto& car : race.cars()) {
