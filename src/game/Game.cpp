@@ -1,9 +1,10 @@
 #include "game/Game.h"
 
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
+#include <SDL3_image/SDL_image.h>
+#include <SDL3_ttf/SDL_ttf.h>
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <string>
 
@@ -21,7 +22,7 @@ std::array<SDL_TexturePtr, 5> loadRockTextures(SDL_Renderer* renderer) {
         std::string path = std::string(MINICAR_ASSETS_DIR) + "/rock" + std::to_string(i + 1) + ".png";
         SDL_Texture* texture = IMG_LoadTexture(renderer, path.c_str());
         if (!texture) {
-            std::cerr << "IMG_LoadTexture failed for " << path << ": " << IMG_GetError() << std::endl;
+            std::cerr << "IMG_LoadTexture failed for " << path << ": " << SDL_GetError() << std::endl;
             continue;
         }
         SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
@@ -63,12 +64,12 @@ bool Game::init(int width, int height, const char* title) {
 }
 
 int Game::run() {
-    m_lastTicks = SDL_GetTicks64();
+    m_lastTicks = SDL_GetTicks();
     while (m_running) {
         pollEvents();
         if (!m_running) break;
 
-        Uint64 nowTicks = SDL_GetTicks64();
+        Uint64 nowTicks = SDL_GetTicks();
         float dt = static_cast<float>(nowTicks - m_lastTicks) / 1000.0f;
         m_lastTicks = nowTicks;
         if (dt > 0.05f) dt = 0.05f; // avoid large jumps after pause/resize
@@ -134,8 +135,8 @@ void Game::startRace() {
 
     carHud.resize(m_race->cars().size());
 
-    winnerRect = SDL_Rect{ 0, 0, 0, 0 };
-    winnerHintRect = SDL_Rect{ 0, 0, 0, 0 };
+    winnerRect = SDL_FRect{ 0, 0, 0, 0 };
+    winnerHintRect = SDL_FRect{ 0, 0, 0, 0 };
 
     countdownTimer = kCountdownDuration;
     countdownLastDigit = -2;
@@ -151,14 +152,14 @@ void Game::startRace() {
 }
 
 void Game::rebuildPlayerLabels() {
-    player1LabelRect = SDL_Rect{ 20, 20, 0, 0 };
+    player1LabelRect = SDL_FRect{ 20, 20, 0, 0 };
     if (const auto& player1Index = m_race->player1Index()) {
         player1LabelTexture = makeLabelTexture("Player 1",
                                                 m_race->cars()[*player1Index].getColor(), player1LabelRect);
     } else {
         player1LabelTexture.reset();
     }
-    player2LabelRect = SDL_Rect{ 20, player1LabelRect.y + player1LabelRect.h + 14, 0, 0 };
+    player2LabelRect = SDL_FRect{ 20, player1LabelRect.y + player1LabelRect.h + 14, 0, 0 };
     if (const auto& player2Index = m_race->player2Index()) {
         player2LabelTexture = makeLabelTexture("Player 2",
                                                 m_race->cars()[*player2Index].getColor(), player2LabelRect);
@@ -179,14 +180,15 @@ void Game::refreshLapTextures() {
     }
 }
 
-SDL_TexturePtr Game::makeLabelTexture(const char* text, SDL_Color color, SDL_Rect& outRect) {
+SDL_TexturePtr Game::makeLabelTexture(const char* text, SDL_Color color, SDL_FRect& outRect) {
     if (!app.font) return SDL_TexturePtr{};
-    SDL_Surface* surface = TTF_RenderText_Blended(app.font, text, color);
+    // SDL3 TTF_RenderText_Blended takes text length as a parameter
+    SDL_Surface* surface = TTF_RenderText_Blended(app.font, text, std::strlen(text), color);
     if (!surface) return SDL_TexturePtr{};
     SDL_Texture* texture = SDL_CreateTextureFromSurface(app.renderer, surface);
-    outRect.w = surface->w;
-    outRect.h = surface->h;
-    SDL_FreeSurface(surface);
+    outRect.w = static_cast<float>(surface->w);
+    outRect.h = static_cast<float>(surface->h);
+    SDL_DestroySurface(surface);
     return SDL_TexturePtr(texture);
 }
 
@@ -195,13 +197,13 @@ SDL_TexturePtr Game::makeLabelTexture(const char* text, SDL_Color color, SDL_Rec
 void Game::pollEvents() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_QUIT) {
+        if (event.type == SDL_EVENT_QUIT) {
             m_running = false;
             continue;
         }
 
-        if (event.type == SDL_KEYDOWN && !(m_state && m_state->ownsInput())) {
-            SDL_Keycode k = event.key.keysym.sym;
+        if (event.type == SDL_EVENT_KEY_DOWN && !(m_state && m_state->ownsInput())) {
+            SDL_Keycode k = event.key.key;
 
             // Universal keys handled by Game, not by any state. Suppressed
             // while a state (e.g. the menu) wants to own all keyboard input.
@@ -209,7 +211,7 @@ void Game::pollEvents() {
                 m_running = false;
                 continue;
             }
-            if (k == SDLK_r) {
+            if (k == SDLK_R) {
                 showMenu();
                 continue;
             }

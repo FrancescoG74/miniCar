@@ -37,31 +37,32 @@ void Sprite::resetAnimation() {
 }
 
 void Sprite::render(SDL_Renderer* renderer, SDL_FPoint center, double angleDegrees,
-                    SDL_Color colorMod, SDL_RendererFlip flip) const {
+                    SDL_Color colorMod, SDL_FlipMode flip) const {
     if (!renderer || !m_texture) return;
 
-    SDL_Rect frameRect;
-    const SDL_Rect* src = nullptr;
-    int width = m_frameWidth;
-    int height = m_frameHeight;
+    SDL_FRect srcRect;
+    const SDL_FRect* src = nullptr;
+    float width = static_cast<float>(m_frameWidth);
+    float height = static_cast<float>(m_frameHeight);
     if (m_frameWidth > 0 && m_frameHeight > 0) {
-        frameRect = {
-            (m_currentFrame % m_framesPerRow) * m_frameWidth,
-            (m_currentFrame / m_framesPerRow) * m_frameHeight,
-            m_frameWidth, m_frameHeight
+        srcRect = {
+            static_cast<float>((m_currentFrame % m_framesPerRow) * m_frameWidth),
+            static_cast<float>((m_currentFrame / m_framesPerRow) * m_frameHeight),
+            static_cast<float>(m_frameWidth),
+            static_cast<float>(m_frameHeight)
         };
-        src = &frameRect;
+        src = &srcRect;
     } else {
-        SDL_QueryTexture(m_texture, nullptr, nullptr, &width, &height);
+        SDL_GetTextureSize(m_texture, &width, &height);
     }
 
-    SDL_Rect dst{
-        static_cast<int>(center.x - static_cast<float>(width) / 2.0f),
-        static_cast<int>(center.y - static_cast<float>(height) / 2.0f),
+    SDL_FRect dst{
+        center.x - width / 2.0f,
+        center.y - height / 2.0f,
         width, height
     };
 
     SDL_SetTextureColorMod(m_texture, colorMod.r, colorMod.g, colorMod.b);
     SDL_SetTextureAlphaMod(m_texture, colorMod.a);
-    SDL_RenderCopyEx(renderer, m_texture, src, &dst, angleDegrees, nullptr, flip);
+    SDL_RenderTextureRotated(renderer, m_texture, src, &dst, angleDegrees, nullptr, flip);
 }

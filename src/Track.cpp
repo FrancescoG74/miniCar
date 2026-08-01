@@ -67,7 +67,9 @@ void Track::render(SDL_Renderer* renderer) const {
     outerPoints.reserve(kSegments + 1);
     innerPoints.reserve(kSegments + 1);
 
-    const SDL_Color roadColor{ 60, 60, 65, 255 };
+    const SDL_Color roadColorByte{ 60, 60, 65, 255 };
+    const SDL_FColor roadColor{ roadColorByte.r / 255.0f, roadColorByte.g / 255.0f, 
+                                roadColorByte.b / 255.0f, roadColorByte.a / 255.0f };
 
     for (int i = 0; i < kSegments; ++i) {
         float s = m_totalLength * static_cast<float>(i) / static_cast<float>(kSegments);
@@ -109,6 +111,6 @@ void Track::render(SDL_Renderer* renderer) const {
     innerPoints.push_back(innerPoints.front());
 
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderDrawLinesF(renderer, outerPoints.data(), static_cast<int>(outerPoints.size()));
-    SDL_RenderDrawLinesF(renderer, innerPoints.data(), static_cast<int>(innerPoints.size()));
+    SDL_RenderLines(renderer, outerPoints.data(), static_cast<int>(outerPoints.size()));
+    SDL_RenderLines(renderer, innerPoints.data(), static_cast<int>(innerPoints.size()));
 }

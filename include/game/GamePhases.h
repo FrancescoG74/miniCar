@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 #include "SdlRaii.h"
 #include "game/GameState.h"
@@ -40,12 +40,12 @@ private:
 
     struct Line {
         SDL_TexturePtr texture;
-        SDL_Rect rect{ 0, 0, 0, 0 };
+        SDL_FRect rect{ 0, 0, 0, 0 };
     };
     SDL_TexturePtr m_titleTexture;
-    SDL_Rect m_titleRect{ 0, 0, 0, 0 };
+    SDL_FRect m_titleRect{ 0, 0, 0, 0 };
     SDL_TexturePtr m_instructionsTexture;
-    SDL_Rect m_instructionsRect{ 0, 0, 0, 0 };
+    SDL_FRect m_instructionsRect{ 0, 0, 0, 0 };
     Line m_lines[kFieldCount];
 };
 

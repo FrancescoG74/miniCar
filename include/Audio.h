@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <array>
 #include <atomic>
 
@@ -25,10 +25,10 @@ public:
     void setCarSpeed(int carIndex, float normalizedSpeed);
 
 private:
-    static void audioCallback(void* userdata, Uint8* stream, int len);
     void generate(Sint16* buffer, int numSamples);
 
     SDL_AudioDeviceID m_device = 0;
+    SDL_AudioStream* m_stream = nullptr;
     int m_sampleRate = 44100;
 
     std::array<std::atomic<float>, kMaxCars> m_speed{};
@@ -55,5 +55,6 @@ public:
 
 private:
     SDL_AudioDeviceID m_device = 0;
+    SDL_AudioStream* m_stream = nullptr;
     int m_sampleRate = 44100;
 };

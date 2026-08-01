@@ -1,5 +1,5 @@
 #include <catch2/catch_all.hpp>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <string>
 #include <vector>
 
@@ -132,7 +132,7 @@ TEST_CASE("KeyboardInput accelerates and steers a Player1 car via CarControls", 
     cars.emplace_back(0.0f, 0.0f, 0.0f, SDL_Color{ 0, 0, 0, 255 }, "P1", 0.0f);
     cars[0].setDriver(DriverKind::Player1);
 
-    std::vector<Uint8> keys(SDL_NUM_SCANCODES, 0);
+    std::vector<Uint8> keys(SDL_SCANCODE_COUNT, 0);
     keys[SDL_SCANCODE_W] = 1; // accelerate (WASD scheme)
     keys[SDL_SCANCODE_D] = 1; // steer right
 

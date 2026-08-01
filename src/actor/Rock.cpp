@@ -36,33 +36,37 @@ void Rock::render(SDL_Renderer* renderer, SDL_Texture* texture) const {
     const SDL_FPoint& pos = getPosition();
 
     if (texture) {
-        int texW = 0;
-        int texH = 0;
-        SDL_QueryTexture(texture, nullptr, nullptr, &texW, &texH);
+        float texW = 0.0f;
+        float texH = 0.0f;
+        SDL_GetTextureSize(texture, &texW, &texH);
         // Scale so the larger image dimension matches the rock's collision diameter,
         // keeping the sprite's aspect ratio instead of stretching it into a square.
-        float scale = (size * 2.0f) / static_cast<float>(std::max(texW, texH));
-        int dstW = static_cast<int>(static_cast<float>(texW) * scale);
-        int dstH = static_cast<int>(static_cast<float>(texH) * scale);
-        SDL_Rect dst{
-            static_cast<int>(pos.x) - dstW / 2,
-            static_cast<int>(pos.y) - dstH / 2,
+        float scale = (size * 2.0f) / std::max(texW, texH);
+        float dstW = texW * scale;
+        float dstH = texH * scale;
+        SDL_FRect dst{
+            pos.x - dstW / 2.0f,
+            pos.y - dstH / 2.0f,
             dstW, dstH
         };
-        SDL_RenderCopy(renderer, texture, nullptr, &dst);
+        SDL_RenderTexture(renderer, texture, nullptr, &dst);
         return;
     }
 
+    SDL_Color colorByte = getColor();
+    SDL_FColor color{ colorByte.r / 255.0f, colorByte.g / 255.0f,
+                      colorByte.b / 255.0f, colorByte.a / 255.0f };
+
     SDL_Vertex verts[kSides + 1];
     verts[0].position = pos;
-    verts[0].color = getColor();
+    verts[0].color = color;
     verts[0].tex_coord = { 0.0f, 0.0f };
 
     for (int i = 0; i < kSides; ++i) {
         float t = static_cast<float>(i) / kSides * 2.0f * static_cast<float>(M_PI);
         float r = size * kRadiusJitter[i];
         verts[i + 1].position = { pos.x + r * std::cos(t), pos.y + r * std::sin(t) };
-        verts[i + 1].color = getColor();
+        verts[i + 1].color = color;
         verts[i + 1].tex_coord = { 0.0f, 0.0f };
     }
 
@@ -80,7 +84,7 @@ void Rock::render(SDL_Renderer* renderer, SDL_Texture* texture) const {
     for (int i = 0; i <= kSides; ++i) {
         outline[i] = verts[1 + (i % kSides)].position;
     }
-    SDL_RenderDrawLinesF(renderer, outline, kSides + 1);
+    SDL_RenderLines(renderer, outline, kSides + 1);
 }
 
 std::vector<Rock> Rock::createInitialRocks(const Track& track) {

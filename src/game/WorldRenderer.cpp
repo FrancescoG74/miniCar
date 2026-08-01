@@ -21,7 +21,7 @@ void drawCircle(SDL_Renderer* renderer, float cx, float cy, float radius, SDL_Co
         points[i] = { cx + radius * std::cos(t), cy + radius * std::sin(t) };
     }
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-    SDL_RenderDrawLinesF(renderer, points, kPoints + 1);
+    SDL_RenderLines(renderer, points, kPoints + 1);
 }
 
 } // namespace
@@ -46,14 +46,14 @@ void WorldRenderer::render(SDL_Renderer* renderer, const Track& track, const Sta
         float cy = car.getPosition().y;
 
         SDL_SetTextureColorMod(carSprite.texture, car.getColor().r, car.getColor().g, car.getColor().b);
-        SDL_Rect dst{
-            static_cast<int>(cx - static_cast<float>(carSprite.width) / 2.0f),
-            static_cast<int>(cy - static_cast<float>(carSprite.height) / 2.0f),
-            carSprite.width,
-            carSprite.height
+        SDL_FRect dst{
+            cx - static_cast<float>(carSprite.width) / 2.0f,
+            cy - static_cast<float>(carSprite.height) / 2.0f,
+            static_cast<float>(carSprite.width),
+            static_cast<float>(carSprite.height)
         };
         double angleDeg = p.angle * 180.0 / M_PI + 90.0;
-        SDL_RenderCopyEx(renderer, carSprite.texture, nullptr, &dst, angleDeg, nullptr, SDL_FLIP_NONE);
+        SDL_RenderTextureRotated(renderer, carSprite.texture, nullptr, &dst, angleDeg, nullptr, SDL_FLIP_NONE);
 
         if (car.driver() != DriverKind::Ai) {
             drawCircle(renderer, cx, cy, static_cast<float>(carSprite.height) * 0.75f,

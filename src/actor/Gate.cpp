@@ -56,16 +56,18 @@ void Gate::render(SDL_Renderer* renderer) const {
     if (!active) return;
 
     const bool closed = isClosed();
-    const SDL_Color barColor = closed
+    const SDL_Color barColorByte = closed
         ? SDL_Color{ 220, 40, 40, 255 }
         : SDL_Color{ 60, 200, 80, 255 };
+    const SDL_FColor barColor{ barColorByte.r / 255.0f, barColorByte.g / 255.0f,
+                                barColorByte.b / 255.0f, barColorByte.a / 255.0f };
 
     // Two dark posts anchoring the gate on either side of the track.
     SDL_SetRenderDrawColor(renderer, 40, 40, 40, 255);
     SDL_FRect postARect{ postA.x - 4.0f, postA.y - 4.0f, 8.0f, 8.0f };
     SDL_FRect postBRect{ postB.x - 4.0f, postB.y - 4.0f, 8.0f, 8.0f };
-    SDL_RenderFillRectF(renderer, &postARect);
-    SDL_RenderFillRectF(renderer, &postBRect);
+    SDL_RenderFillRect(renderer, &postARect);
+    SDL_RenderFillRect(renderer, &postBRect);
 
     // The bar itself is a rectangle spanning postA -> postB with `thickness` extent
     // along the track's forward direction. Built as two triangles via RenderGeometry
@@ -88,11 +90,11 @@ void Gate::render(SDL_Renderer* renderer) const {
     } else {
         // Open: only draw the bar outline in green so the gate stays visible but
         // clearly signals "passable".
-        SDL_SetRenderDrawColor(renderer, barColor.r, barColor.g, barColor.b, barColor.a);
+        SDL_SetRenderDrawColor(renderer, barColorByte.r, barColorByte.g, barColorByte.b, barColorByte.a);
         SDL_FPoint outline[5] = {
             verts[0].position, verts[1].position, verts[2].position, verts[3].position, verts[0].position
         };
-        SDL_RenderDrawLinesF(renderer, outline, 5);
+        SDL_RenderLines(renderer, outline, 5);
     }
 }
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <string>
 
 // Optional spoken-word audio cue (e.g. "3", "2", "1", "Go" for the pre-race
@@ -25,6 +25,7 @@ public:
 
 private:
     SDL_AudioDeviceID m_device = 0;
+    SDL_AudioStream* m_stream = nullptr;
     int m_sampleRate = 22050;
     bool m_available = false;
 };

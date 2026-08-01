@@ -30,9 +30,27 @@ function(minicar_configure_quality target)
     endif()
 endfunction()
 
-find_package(SDL2 REQUIRED)
-find_package(SDL2_ttf REQUIRED)
-find_package(SDL2_image REQUIRED)
+find_package(SDL3 REQUIRED)
+
+# Try find_package first, fall back to pkg-config for SDL3_ttf
+find_package(SDL3_ttf QUIET)
+if(NOT SDL3_ttf_FOUND)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(SDL3_TTF REQUIRED sdl3-ttf)
+    set(SDL3_ttf_FOUND TRUE)
+    set(SDL3_TTF_INCLUDE_DIRS ${SDL3_TTF_INCLUDE_DIRS})
+    set(SDL3_TTF_LIBRARIES ${SDL3_TTF_LIBRARIES})
+endif()
+
+# Try find_package first, fall back to pkg-config for SDL3_image
+find_package(SDL3_image QUIET)
+if(NOT SDL3_image_FOUND)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(SDL3_IMAGE REQUIRED sdl3-image)
+    set(SDL3_image_FOUND TRUE)
+    set(SDL3_IMAGE_INCLUDE_DIRS ${SDL3_IMAGE_INCLUDE_DIRS})
+    set(SDL3_IMAGE_LIBRARIES ${SDL3_IMAGE_LIBRARIES})
+endif()
 
 # Pure gameplay logic: track math, physics, collisions, driver strategies and
 # the race domain model. Deliberately excludes anything that touches audio
@@ -56,14 +74,13 @@ add_library(minicar_core STATIC
 
 target_include_directories(minicar_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${SDL2_INCLUDE_DIRS}
 )
 minicar_configure_quality(minicar_core)
 
-if(TARGET SDL2::SDL2)
-    target_link_libraries(minicar_core PUBLIC SDL2::SDL2)
+if(TARGET SDL3::SDL3)
+    target_link_libraries(minicar_core PUBLIC SDL3::SDL3)
 else()
-    target_link_libraries(minicar_core PUBLIC ${SDL2_LIBRARIES})
+    target_link_libraries(minicar_core PUBLIC ${SDL3_LIBRARIES})
 endif()
 
 add_executable(minicar
@@ -80,7 +97,10 @@ add_executable(minicar
 
 target_include_directories(minicar PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${SDL2_INCLUDE_DIRS}
+    ${SDL3_TTF_INCLUDE_DIRS}
+    ${SDL3_IMAGE_INCLUDE_DIRS}
+    /usr/include/SDL3_ttf
+    /usr/include/SDL3_image
 )
 
 target_link_libraries(minicar PRIVATE minicar_core)
@@ -112,22 +132,16 @@ else()
     message(STATUS "espeak-ng not found: countdown will use beep tones only")
 endif()
 
-# minicar_core already links SDL2 PUBLICly, but SDL2main (when present) must be
-# linked directly on the final executable to correctly override main.
-if(TARGET SDL2::SDL2main)
-    target_link_libraries(minicar PRIVATE SDL2::SDL2main)
+if(TARGET SDL3_ttf::SDL3_ttf)
+    target_link_libraries(minicar PRIVATE SDL3_ttf::SDL3_ttf)
+else()
+    target_link_libraries(minicar PRIVATE ${SDL3_TTF_LIBRARIES})
 endif()
 
-if(TARGET SDL2_ttf::SDL2_ttf)
-    target_link_libraries(minicar PRIVATE SDL2_ttf::SDL2_ttf)
+if(TARGET SDL3_image::SDL3_image)
+    target_link_libraries(minicar PRIVATE SDL3_image::SDL3_image)
 else()
-    target_link_libraries(minicar PRIVATE ${SDL2_TTF_LIBRARIES})
-endif()
-
-if(TARGET SDL2_image::SDL2_image)
-    target_link_libraries(minicar PRIVATE SDL2_image::SDL2_image)
-else()
-    target_link_libraries(minicar PRIVATE ${SDL2_IMAGE_LIBRARIES})
+    target_link_libraries(minicar PRIVATE ${SDL3_IMAGE_LIBRARIES})
 endif()
 
 # Absolute path to assets/ baked in at build time so the game finds its sprite

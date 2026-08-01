@@ -17,22 +17,41 @@ EngineSound::~EngineSound() {
 bool EngineSound::init() {
     SDL_AudioSpec desired{};
     desired.freq = m_sampleRate;
-    desired.format = AUDIO_S16SYS;
+    desired.format = SDL_AUDIO_S16;
     desired.channels = 1;
-    desired.samples = 1024;
-    desired.callback = &EngineSound::audioCallback;
-    desired.userdata = this;
 
-    SDL_AudioSpec obtained{};
-    m_device = SDL_OpenAudioDevice(nullptr, 0, &desired, &obtained, 0);
-    if (m_device == 0) {
-        std::cerr << "SDL_OpenAudioDevice failed (continuing without sound): "
+    m_stream = SDL_CreateAudioStream(&desired, &desired);
+    if (!m_stream) {
+        std::cerr << "SDL_CreateAudioStream failed (continuing without sound): "
                    << SDL_GetError() << std::endl;
         return false;
     }
 
-    m_sampleRate = obtained.freq;
-    SDL_PauseAudioDevice(m_device, 0); // start playback
+    m_device = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired);
+    if (m_device == 0) {
+        std::cerr << "SDL_OpenAudioDevice failed (continuing without sound): "
+                   << SDL_GetError() << std::endl;
+        SDL_DestroyAudioStream(m_stream);
+        m_stream = nullptr;
+        return false;
+    }
+
+    if (!SDL_BindAudioStream(m_device, m_stream)) {
+        std::cerr << "SDL_BindAudioStream failed (continuing without sound): "
+                   << SDL_GetError() << std::endl;
+        SDL_DestroyAudioStream(m_stream);
+        m_stream = nullptr;
+        SDL_CloseAudioDevice(m_device);
+        m_device = 0;
+        return false;
+    }
+
+    // Pre-fill stream with initial silence
+    const int bufferSize = m_sampleRate / 10;  // 100ms buffer
+    std::vector<Sint16> initialBuffer(bufferSize, 0);
+    SDL_PutAudioStreamData(m_stream, initialBuffer.data(), bufferSize * sizeof(Sint16));
+
+    SDL_ResumeAudioDevice(m_device); // start playback
     return true;
 }
 
@@ -41,17 +60,24 @@ void EngineSound::shutdown() {
         SDL_CloseAudioDevice(m_device);
         m_device = 0;
     }
+    if (m_stream) {
+        SDL_DestroyAudioStream(m_stream);
+        m_stream = nullptr;
+    }
 }
 
 void EngineSound::setCarSpeed(int carIndex, float normalizedSpeed) {
     if (carIndex < 0 || carIndex >= kMaxCars) return;
     float clamped = std::clamp(normalizedSpeed, 0.0f, 1.0f);
     m_speed[carIndex].store(clamped, std::memory_order_relaxed);
-}
 
-void EngineSound::audioCallback(void* userdata, Uint8* stream, int len) {
-    auto* self = static_cast<EngineSound*>(userdata);
-    self->generate(reinterpret_cast<Sint16*>(stream), len / static_cast<int>(sizeof(Sint16)));
+    // Generate and queue audio data if we have a stream
+    if (m_stream && m_device != 0) {
+        const int chunkSize = m_sampleRate / 20;  // 50ms chunks
+        std::vector<Sint16> buffer(chunkSize);
+        generate(buffer.data(), chunkSize);
+        SDL_PutAudioStreamData(m_stream, buffer.data(), chunkSize * sizeof(Sint16));
+    }
 }
 
 void EngineSound::generate(Sint16* buffer, int numSamples) {
@@ -84,21 +110,36 @@ UiSound::~UiSound() {
 bool UiSound::init() {
     SDL_AudioSpec desired{};
     desired.freq = m_sampleRate;
-    desired.format = AUDIO_S16SYS;
+    desired.format = SDL_AUDIO_S16;
     desired.channels = 1;
-    desired.samples = 1024;
-    desired.callback = nullptr; // one-shot sounds are pushed via SDL_QueueAudio
 
-    SDL_AudioSpec obtained{};
-    m_device = SDL_OpenAudioDevice(nullptr, 0, &desired, &obtained, 0);
-    if (m_device == 0) {
-        std::cerr << "SDL_OpenAudioDevice (UI sounds) failed (continuing without sound): "
+    m_stream = SDL_CreateAudioStream(&desired, &desired);
+    if (!m_stream) {
+        std::cerr << "SDL_CreateAudioStream (UI sounds) failed (continuing without sound): "
                    << SDL_GetError() << std::endl;
         return false;
     }
 
-    m_sampleRate = obtained.freq;
-    SDL_PauseAudioDevice(m_device, 0); // start playback
+    m_device = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired);
+    if (m_device == 0) {
+        std::cerr << "SDL_OpenAudioDevice (UI sounds) failed (continuing without sound): "
+                   << SDL_GetError() << std::endl;
+        SDL_DestroyAudioStream(m_stream);
+        m_stream = nullptr;
+        return false;
+    }
+
+    if (!SDL_BindAudioStream(m_device, m_stream)) {
+        std::cerr << "SDL_BindAudioStream (UI sounds) failed (continuing without sound): "
+                   << SDL_GetError() << std::endl;
+        SDL_DestroyAudioStream(m_stream);
+        m_stream = nullptr;
+        SDL_CloseAudioDevice(m_device);
+        m_device = 0;
+        return false;
+    }
+
+    SDL_ResumeAudioDevice(m_device); // start playback
     return true;
 }
 
@@ -107,10 +148,14 @@ void UiSound::shutdown() {
         SDL_CloseAudioDevice(m_device);
         m_device = 0;
     }
+    if (m_stream) {
+        SDL_DestroyAudioStream(m_stream);
+        m_stream = nullptr;
+    }
 }
 
 void UiSound::playBeep(float frequencyHz, float durationSeconds, float volume) {
-    if (m_device == 0) return;
+    if (m_device == 0 || !m_stream) return;
 
     constexpr double kPi = 3.14159265358979323846;
     constexpr double kFadeSeconds = 0.01; // short fade in/out to avoid clicks
@@ -125,5 +170,5 @@ void UiSound::playBeep(float frequencyHz, float durationSeconds, float volume) {
         buffer[i] = static_cast<Sint16>(std::clamp(sample, -1.0, 1.0) * 32767.0);
     }
 
-    SDL_QueueAudio(m_device, buffer.data(), static_cast<Uint32>(buffer.size() * sizeof(Sint16)));
+    SDL_PutAudioStreamData(m_stream, buffer.data(), static_cast<int>(buffer.size() * sizeof(Sint16)));
 }

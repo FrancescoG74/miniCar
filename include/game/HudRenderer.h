@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <vector>
 
 #include "SdlRaii.h"
@@ -14,7 +14,7 @@ class Car;
 // array smell that made P2 join/leave HUD invalidation error-prone.
 struct CarHudRow {
     SDL_TexturePtr texture;
-    SDL_Rect rect{ 0, 0, 0, 0 };
+    SDL_FRect rect{ 0, 0, 0, 0 };
     int lastLaps = -1;
 };
 
@@ -25,7 +25,7 @@ class HudRenderer {
 public:
     // Draws a single label texture with a translucent black backing rect.
     // No-op if `texture` is null (e.g. Player 2 hasn't joined yet).
-    static void renderLabel(SDL_Renderer* renderer, SDL_Texture* texture, const SDL_Rect& rect);
+    static void renderLabel(SDL_Renderer* renderer, SDL_Texture* texture, const SDL_FRect& rect);
 
     // Sorts by lap count (then distance traveled as a tie-breaker) so the
     // current leader is on top, lays out each row along the right edge, and

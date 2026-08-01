@@ -26,8 +26,9 @@ void StartLine::render(SDL_Renderer* renderer) const {
     // ±checkerHeight/2 along the perpendicular. Drawing them with SDL_RenderGeometry
     // keeps the line correct even when placed on a curved section of track.
     for (int i = 0; i < kCheckerCount; ++i) {
-        SDL_Color c = (i % 2 == 0) ? SDL_Color{ 20, 20, 20, 255 }
-                                    : SDL_Color{ 235, 235, 235, 255 };
+        SDL_Color cByte = (i % 2 == 0) ? SDL_Color{ 20, 20, 20, 255 }
+                                        : SDL_Color{ 235, 235, 235, 255 };
+        SDL_FColor c{ cByte.r / 255.0f, cByte.g / 255.0f, cByte.b / 255.0f, cByte.a / 255.0f };
 
         float perpOffset = -trackWidth / 2.0f +
                            checkerHeight * (static_cast<float>(i) + 0.5f);

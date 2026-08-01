@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <array>
 #include <memory>
 #include <string>
@@ -84,7 +84,7 @@ public:
     // Rebuilds player1/2 label textures using the currently-driven cars' colors.
     void rebuildPlayerLabels();
 
-    SDL_TexturePtr makeLabelTexture(const char* text, SDL_Color color, SDL_Rect& outRect);
+    SDL_TexturePtr makeLabelTexture(const char* text, SDL_Color color, SDL_FRect& outRect);
 
     // -- Public shared data (owned by Game, accessed by states) -----------
     AppWindow app;
@@ -99,8 +99,8 @@ public:
     // Player 1/2 labels in the top-left corner.
     SDL_TexturePtr player1LabelTexture;
     SDL_TexturePtr player2LabelTexture;
-    SDL_Rect player1LabelRect{ 20, 20, 0, 0 };
-    SDL_Rect player2LabelRect{ 20, 20, 0, 0 };
+    SDL_FRect player1LabelRect{ 20, 20, 0, 0 };
+    SDL_FRect player2LabelRect{ 20, 20, 0, 0 };
 
     // Per-car lap HUD stacked on the right, one row per car (indexed the same
     // as RaceSession::cars()). Drawn by HudRenderer::renderLeaderboard.
@@ -109,14 +109,14 @@ public:
     // Countdown overlay.
     float countdownTimer = 0.0f;
     SDL_TexturePtr countdownTexture;
-    SDL_Rect countdownRect{ 0, 0, 0, 0 };
+    SDL_FRect countdownRect{ 0, 0, 0, 0 };
     int countdownLastDigit = -2;
 
     // Race outcome presentation.
     SDL_TexturePtr winnerTexture;
-    SDL_Rect winnerRect{ 0, 0, 0, 0 };
+    SDL_FRect winnerRect{ 0, 0, 0, 0 };
     SDL_TexturePtr winnerHintTexture;
-    SDL_Rect winnerHintRect{ 0, 0, 0, 0 };
+    SDL_FRect winnerHintRect{ 0, 0, 0, 0 };
 
     // Audio backends.
     EngineSound engineSound;

@@ -4,12 +4,13 @@
 
 #include "actor/Car.h"
 
-void HudRenderer::renderLabel(SDL_Renderer* renderer, SDL_Texture* texture, const SDL_Rect& rect) {
+void HudRenderer::renderLabel(SDL_Renderer* renderer, SDL_Texture* texture, const SDL_FRect& rect) {
     if (!texture) return;
-    SDL_Rect background{ rect.x - 8, rect.y - 6, rect.w + 16, rect.h + 12 };
+    SDL_FRect background{ rect.x - 8.0f, rect.y - 6.0f, rect.w + 16.0f, rect.h + 12.0f };
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
     SDL_RenderFillRect(renderer, &background);
-    SDL_RenderCopy(renderer, texture, nullptr, &rect);
+    
+    SDL_RenderTexture(renderer, texture, nullptr, &rect);
 }
 
 void HudRenderer::renderLeaderboard(SDL_Renderer* renderer, int windowWidth,
@@ -23,17 +24,19 @@ void HudRenderer::renderLeaderboard(SDL_Renderer* renderer, int windowWidth,
         return cars[a].distanceTraveled > cars[b].distanceTraveled;
     });
 
-    int rowY = 20;
+    float rowY = 20.0f;
     for (size_t idx : order) {
         SDL_Texture* tex = hud[idx].texture.get();
         if (!tex) continue;
-        SDL_Rect& r = hud[idx].rect;
-        r.x = windowWidth - 20 - r.w;
+        SDL_FRect& r = hud[idx].rect;
+        r.x = static_cast<float>(windowWidth) - 20.0f - r.w;
         r.y = rowY;
-        SDL_Rect background{ r.x - 8, r.y - 4, r.w + 16, r.h + 8 };
+        
+        SDL_FRect background{ r.x - 8.0f, rowY - 4.0f, r.w + 16.0f, r.h + 8.0f };
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
         SDL_RenderFillRect(renderer, &background);
-        SDL_RenderCopy(renderer, tex, nullptr, &r);
-        rowY += r.h + 8;
+        
+        SDL_RenderTexture(renderer, tex, nullptr, &r);
+        rowY += r.h + 8.0f;
     }
 }

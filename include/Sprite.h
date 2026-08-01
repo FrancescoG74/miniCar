@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 // Attaches a (non-owning) texture and optional frame animation to an Actor.
 // The texture is owned elsewhere (e.g. Game), matching the existing convention
@@ -32,7 +32,7 @@ public:
     // and tinted by `colorMod`. No-op if no texture is attached.
     void render(SDL_Renderer* renderer, SDL_FPoint center, double angleDegrees = 0.0,
                 SDL_Color colorMod = SDL_Color{ 255, 255, 255, 255 },
-                SDL_RendererFlip flip = SDL_FLIP_NONE) const;
+                SDL_FlipMode flip = SDL_FLIP_NONE) const;
 
 private:
     SDL_Texture* m_texture = nullptr;

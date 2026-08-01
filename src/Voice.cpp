@@ -110,19 +110,36 @@ bool Voice::init() {
 
     SDL_AudioSpec desired{};
     desired.freq = m_sampleRate;
-    desired.format = AUDIO_S16SYS;
+    desired.format = SDL_AUDIO_S16;
     desired.channels = 1;
-    desired.samples = 1024;
-    desired.callback = nullptr; // one-shot sounds are pushed via SDL_QueueAudio
 
-    SDL_AudioSpec obtained{};
-    m_device = SDL_OpenAudioDevice(nullptr, 0, &desired, &obtained, 0);
-    if (m_device == 0) {
-        std::cerr << "SDL_OpenAudioDevice (voice) failed (continuing without voice): "
+    m_stream = SDL_CreateAudioStream(&desired, &desired);
+    if (!m_stream) {
+        std::cerr << "SDL_CreateAudioStream (voice) failed (continuing without voice): "
                    << SDL_GetError() << std::endl;
         return false;
     }
-    SDL_PauseAudioDevice(m_device, 0);
+
+    m_device = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired);
+    if (m_device == 0) {
+        std::cerr << "SDL_OpenAudioDevice (voice) failed (continuing without voice): "
+                   << SDL_GetError() << std::endl;
+        SDL_DestroyAudioStream(m_stream);
+        m_stream = nullptr;
+        return false;
+    }
+
+    if (!SDL_BindAudioStream(m_device, m_stream)) {
+        std::cerr << "SDL_BindAudioStream (voice) failed (continuing without voice): "
+                   << SDL_GetError() << std::endl;
+        SDL_DestroyAudioStream(m_stream);
+        m_stream = nullptr;
+        SDL_CloseAudioDevice(m_device);
+        m_device = 0;
+        return false;
+    }
+
+    SDL_ResumeAudioDevice(m_device);
     m_available = true;
     return true;
 #else
@@ -136,6 +153,10 @@ void Voice::shutdown() {
         SDL_CloseAudioDevice(m_device);
         m_device = 0;
     }
+    if (m_stream) {
+        SDL_DestroyAudioStream(m_stream);
+        m_stream = nullptr;
+    }
     if (m_available) {
         espeak_Terminate();
         m_available = false;
@@ -145,7 +166,7 @@ void Voice::shutdown() {
 
 void Voice::speak(const std::string& text) {
 #ifdef MINICAR_HAVE_ESPEAK
-    if (!m_available || m_device == 0) return;
+    if (!m_available || m_device == 0 || !m_stream) return;
 
     std::vector<short> samples;
     g_captureBuffer = &samples;
@@ -155,7 +176,7 @@ void Voice::speak(const std::string& text) {
     g_captureBuffer = nullptr;
 
     if (!samples.empty()) {
-        SDL_QueueAudio(m_device, samples.data(), static_cast<Uint32>(samples.size() * sizeof(short)));
+        SDL_PutAudioStreamData(m_stream, samples.data(), static_cast<int>(samples.size() * sizeof(short)));
     }
 #else
     (void)text;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 // A point on the track centerline: position plus direction of travel (radians, 0 = +x).
 struct TrackPoint {

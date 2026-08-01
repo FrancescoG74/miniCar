@@ -97,15 +97,15 @@ std::vector<Car> Car::createInitialGrid(float laneOffset) {
 }
 
 SDL_TexturePtr Car::createTexture(SDL_Renderer* renderer, int width, int height) {
-    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, width, height, 32, SDL_PIXELFORMAT_RGBA32);
-    SDL_FillRect(surface, nullptr, SDL_MapRGBA(surface->format, 255, 255, 255, 255));
+    SDL_Surface* surface = SDL_CreateSurface(width, height, SDL_PIXELFORMAT_RGBA32);
+    SDL_FillSurfaceRect(surface, nullptr, SDL_MapRGBA(SDL_GetPixelFormatDetails(surface->format), nullptr, 255, 255, 255, 255));
 
     // Darker "windshield" near one end so rotation/orientation is visible.
     SDL_Rect windshield{ width / 4, height / 8, width / 2, height / 4 };
-    SDL_FillRect(surface, &windshield, SDL_MapRGBA(surface->format, 40, 40, 40, 255));
+    SDL_FillSurfaceRect(surface, &windshield, SDL_MapRGBA(SDL_GetPixelFormatDetails(surface->format), nullptr, 40, 40, 40, 255));
 
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-    SDL_FreeSurface(surface);
+    SDL_DestroySurface(surface);
     return SDL_TexturePtr(texture);
 }

@@ -1,6 +1,6 @@
 #include "game/GamePhases.h"
 
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <algorithm>
 #include <cmath>
 #include <string>
@@ -13,7 +13,7 @@
 // ==========================================================================
 
 void MenuState::onEnter(Game& game) {
-    SDL_StartTextInput();
+    SDL_StartTextInput(game.app.window);
     m_focus = Field::Players;
     m_dirty = true;
     m_lapsFresh = true;
@@ -26,8 +26,8 @@ void MenuState::onEnter(Game& game) {
         SDL_Color{ 200, 200, 200, 255 }, m_instructionsRect);
 }
 
-void MenuState::onExit(Game& /*game*/) {
-    SDL_StopTextInput();
+void MenuState::onExit(Game& game) {
+    SDL_StopTextInput(game.app.window);
 }
 
 void MenuState::moveFocus(Game& game, int direction) {
@@ -102,13 +102,13 @@ void MenuState::backspace(Game& game) {
 }
 
 void MenuState::handleEvent(Game& game, const SDL_Event& event) {
-    if (event.type == SDL_TEXTINPUT) {
+    if (event.type == SDL_EVENT_TEXT_INPUT) {
         appendText(game, event.text.text);
         return;
     }
-    if (event.type != SDL_KEYDOWN) return;
+    if (event.type != SDL_EVENT_KEY_DOWN) return;
 
-    switch (event.key.keysym.sym) {
+    switch (event.key.key) {
     case SDLK_ESCAPE:
         game.quit();
         break;
@@ -179,15 +179,15 @@ void MenuState::rebuildTextures(Game& game) {
 void MenuState::renderOverlay(Game& game) {
     SDL_Renderer* renderer = game.app.renderer;
 
-    SDL_Rect full{ 0, 0, game.windowWidth, game.windowHeight };
+    SDL_FRect full{ 0, 0, static_cast<float>(game.windowWidth), static_cast<float>(game.windowHeight) };
     SDL_SetRenderDrawColor(renderer, 24, 28, 36, 255);
     SDL_RenderFillRect(renderer, &full);
 
-    auto drawCentered = [&](SDL_Texture* texture, SDL_Rect& rect, int lineY) {
+    auto drawCentered = [&](SDL_Texture* texture, SDL_FRect& rect, int lineY) {
         if (!texture) return;
-        rect.x = (game.windowWidth - rect.w) / 2;
-        rect.y = lineY;
-        SDL_RenderCopy(renderer, texture, nullptr, &rect);
+        rect.x = (game.windowWidth - rect.w) / 2.0f;
+        rect.y = static_cast<float>(lineY);
+        SDL_RenderTexture(renderer, texture, nullptr, &rect);
     };
 
     int y = game.windowHeight / 2 - 160;
@@ -227,15 +227,15 @@ void CountdownState::update(Game& game, float dt) {
     // changes (once per second, effectively).
     int digit = std::max(0, static_cast<int>(std::ceil(game.countdownTimer)) - 1);
     if (digit != game.countdownLastDigit) {
-        SDL_Rect naturalRect{ 0, 0, 0, 0 };
+        SDL_FRect naturalRect{ 0, 0, 0, 0 };
         game.countdownTexture = game.makeLabelTexture(std::to_string(digit).c_str(),
                                                        SDL_Color{ 255, 255, 255, 255 }, naturalRect);
         constexpr float kCountdownScale = 4.0f;
-        game.countdownRect = SDL_Rect{
-            (game.windowWidth - static_cast<int>(static_cast<float>(naturalRect.w) * kCountdownScale)) / 2,
-            (game.windowHeight - static_cast<int>(static_cast<float>(naturalRect.h) * kCountdownScale)) / 2,
-            static_cast<int>(static_cast<float>(naturalRect.w) * kCountdownScale),
-            static_cast<int>(static_cast<float>(naturalRect.h) * kCountdownScale)
+        game.countdownRect = SDL_FRect{
+            (static_cast<float>(game.windowWidth) - naturalRect.w * kCountdownScale) / 2.0f,
+            (static_cast<float>(game.windowHeight) - naturalRect.h * kCountdownScale) / 2.0f,
+            naturalRect.w * kCountdownScale,
+            naturalRect.h * kCountdownScale
         };
         game.countdownLastDigit = digit;
 
@@ -255,13 +255,13 @@ void CountdownState::update(Game& game, float dt) {
 void CountdownState::renderOverlay(Game& game) {
     if (!game.countdownTexture) return;
     SDL_Renderer* renderer = game.app.renderer;
-    SDL_Rect background{
+    SDL_FRect background{
         game.countdownRect.x - 20, game.countdownRect.y - 12,
         game.countdownRect.w + 40, game.countdownRect.h + 24
     };
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 150);
     SDL_RenderFillRect(renderer, &background);
-    SDL_RenderCopy(renderer, game.countdownTexture.get(), nullptr, &game.countdownRect);
+    SDL_RenderTexture(renderer, game.countdownTexture.get(), nullptr, &game.countdownRect);
 }
 
 // ==========================================================================
@@ -269,7 +269,10 @@ void CountdownState::renderOverlay(Game& game) {
 // ==========================================================================
 
 void RacingState::update(Game& game, float dt) {
-    const Uint8* keys = SDL_GetKeyboardState(nullptr);
+    const bool* boolKeys = SDL_GetKeyboardState(nullptr);
+    // Convert bool* to Uint8* for RaceSession API (SDL_SCANCODE values are 0-based indices)
+    // This is safe because we're just using the array as a key state lookup table
+    const Uint8* keys = reinterpret_cast<const Uint8*>(boolKeys);
     game.race().update(dt, keys);
     game.synchronizeEngineSound();
     game.refreshLapTextures();
@@ -291,14 +294,14 @@ void FinishedState::onEnter(Game& game) {
     game.winnerTexture = game.makeLabelTexture(winMsg.c_str(),
                                                 cars[*winnerIndex].getColor(),
                                                 game.winnerRect);
-    game.winnerRect.x = (game.windowWidth - game.winnerRect.w) / 2;
-    game.winnerRect.y = (game.windowHeight - game.winnerRect.h) / 2;
+    game.winnerRect.x = (static_cast<float>(game.windowWidth) - game.winnerRect.w) / 2.0f;
+    game.winnerRect.y = (static_cast<float>(game.windowHeight) - game.winnerRect.h) / 2.0f;
 
     game.winnerHintTexture = game.makeLabelTexture("Press Esc to quit",
                                                     SDL_Color{ 230, 230, 230, 255 },
                                                     game.winnerHintRect);
-    game.winnerHintRect.x = (game.windowWidth - game.winnerHintRect.w) / 2;
-    game.winnerHintRect.y = game.winnerRect.y + game.winnerRect.h + 16;
+    game.winnerHintRect.x = (static_cast<float>(game.windowWidth) - game.winnerHintRect.w) / 2.0f;
+    game.winnerHintRect.y = game.winnerRect.y + game.winnerRect.h + 16.0f;
 }
 
 void FinishedState::update(Game& game, float /*dt*/) {
@@ -311,20 +314,20 @@ void FinishedState::update(Game& game, float /*dt*/) {
 void FinishedState::renderOverlay(Game& game) {
     SDL_Renderer* renderer = game.app.renderer;
 
-    SDL_Rect overlay{ 0, 0, game.windowWidth, game.windowHeight };
+    SDL_FRect overlay{ 0, 0, static_cast<float>(game.windowWidth), static_cast<float>(game.windowHeight) };
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 140);
     SDL_RenderFillRect(renderer, &overlay);
 
     if (game.winnerTexture) {
-        SDL_Rect background{
+        SDL_FRect background{
             game.winnerRect.x - 20, game.winnerRect.y - 14,
             game.winnerRect.w + 40, game.winnerRect.h + 28
         };
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
         SDL_RenderFillRect(renderer, &background);
-        SDL_RenderCopy(renderer, game.winnerTexture.get(), nullptr, &game.winnerRect);
+        SDL_RenderTexture(renderer, game.winnerTexture.get(), nullptr, &game.winnerRect);
     }
     if (game.winnerHintTexture) {
-        SDL_RenderCopy(renderer, game.winnerHintTexture.get(), nullptr, &game.winnerHintRect);
+        SDL_RenderTexture(renderer, game.winnerHintTexture.get(), nullptr, &game.winnerHintRect);
     }
 }
