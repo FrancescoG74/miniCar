@@ -9,6 +9,10 @@ option(MINICAR_ENABLE_WARNINGS "Enable compiler warnings" ON)
 option(MINICAR_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(MINICAR_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 
+# --- SDL3 CONFIGURATION (PREFAB) ---
+# This looks for the AAR you added to your libs folder
+find_package(SDL3 REQUIRED CONFIG)
+
 function(minicar_configure_quality target)
     if(MINICAR_ENABLE_WARNINGS)
         if(MSVC)

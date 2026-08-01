@@ -1,0 +1,60 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/include",
+                "/usr/include/SDL2",
+                "/usr/local/include/SDL2"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+        },
+        {
+            "name": "macOS",
+            "includePath": [
+                "${workspaceFolder}/include",
+                "/usr/local/include/SDL2",
+                "/opt/homebrew/include/SDL2"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "macos-clang-arm64",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+        },
+        {
+            "name": "Windows",
+            "includePath": [
+                "${workspaceFolder}/include",
+                "C:/vcpkg/packages/sdl2_x64-windows/include"
+            ],
+            "defines": ["_WINDOWS"],
+            "compilerPath": "C:/Program Files/LLVM/bin/clang.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-clang-x64",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+        },
+        {
+            "name": "Android",
+            "includePath": [
+                "${workspaceFolder}/include",
+                "${env:ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include",
+                "${env:ANDROID_NDK_HOME}/sources/android/native_app_glue"
+            ],
+            "defines": ["ANDROID"],
+            "compilerPath": "${env:ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-clang-arm64"
+        }
+    ],
+    "version": 4
+}
+

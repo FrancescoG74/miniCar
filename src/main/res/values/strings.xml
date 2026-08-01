@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">miniCar</string>
+    <string name="app_description">A tiny 2-player top-down racing game in C++17 on top of SDL2</string>
+</resources>
+
