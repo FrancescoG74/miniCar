@@ -1,8 +1,8 @@
 #pragma once
 
 #include <SDL3/SDL.h>
-#include <SDL_image.h>
-#include <SDL_ttf.h>
+#include <SDL3_image/SDL_image.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 // RAII bundle for the window, renderer, HUD font and the underlying SDL / SDL_ttf /
 // SDL_image subsystems. The destructor cleans up whatever `initApp` managed to open,

@@ -3,7 +3,6 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/miniCar.iml" filepath="$PROJECT_DIR$/.idea/miniCar.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/miniCar.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/miniCar.androidTest.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/miniCar.main.iml" filepath="$PROJECT_DIR$/.idea/modules/miniCar.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/miniCar.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/miniCar.unitTest.iml" />
     </modules>
