@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #include <array>
 #include <memory>
 #include <string>

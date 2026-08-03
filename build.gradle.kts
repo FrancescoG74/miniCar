@@ -24,6 +24,7 @@ android {
             cmake {
                 cppFlags += "-std=c++17"
                 arguments += "-DANDROID_PLATFORM=android-29"
+                arguments += "-DANDROID_LDFLAGS=-Wl,--undefined=SDL_main"
             }
         }
     }

@@ -78,7 +78,7 @@ else()
 endif()
 
 # --- MAIN EXECUTABLE ---
-add_executable(minicar
+add_executable(main SHARED
         src/main.cpp
         src/Audio.cpp
         src/Voice.cpp
@@ -90,45 +90,45 @@ add_executable(minicar
         src/game/HudRenderer.cpp
 )
 
-target_include_directories(minicar PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Include directories for TTF/Image (mostly for Linux fallback)
 if(SDL3_TTF_INCLUDE_DIRS)
-    target_include_directories(minicar PRIVATE ${SDL3_TTF_INCLUDE_DIRS})
+    target_include_directories(main PRIVATE ${SDL3_TTF_INCLUDE_DIRS})
 endif()
 if(SDL3_IMAGE_INCLUDE_DIRS)
-    target_include_directories(minicar PRIVATE ${SDL3_IMAGE_INCLUDE_DIRS})
+    target_include_directories(main PRIVATE ${SDL3_IMAGE_INCLUDE_DIRS})
 endif()
 
-target_link_libraries(minicar PRIVATE minicar_core)
-minicar_configure_quality(minicar)
+target_link_libraries(main PRIVATE minicar_core)
+minicar_configure_quality(main)
 
 # --- LINKING ADDITIONAL LIBS ---
 
 # TTF
 if(TARGET SDL3_ttf::SDL3_ttf)
-    target_link_libraries(minicar PRIVATE SDL3_ttf::SDL3_ttf)
+    target_link_libraries(main   PRIVATE SDL3_ttf::SDL3_ttf)
 elseif(SDL3_TTF_LIBRARIES)
-    target_link_libraries(minicar PRIVATE ${SDL3_TTF_LIBRARIES})
+    target_link_libraries(main PRIVATE ${SDL3_TTF_LIBRARIES})
 endif()
 
 # Image
 if(TARGET SDL3_image::SDL3_image)
-    target_link_libraries(minicar PRIVATE SDL3_image::SDL3_image)
+    target_link_libraries(main PRIVATE SDL3_image::SDL3_image)
 elseif(SDL3_IMAGE_LIBRARIES)
-    target_link_libraries(minicar PRIVATE ${SDL3_IMAGE_LIBRARIES})
+    target_link_libraries(main PRIVATE ${SDL3_IMAGE_LIBRARIES})
 endif()
 
 # --- ESPEAK (Linux Only) ---
 if(NOT WIN32 AND NOT ANDROID)
     find_library(ESPEAK_NG_LIBRARY NAMES espeak-ng)
     if(ESPEAK_NG_LIBRARY)
-        target_compile_definitions(minicar PRIVATE MINICAR_HAVE_ESPEAK=1)
-        target_link_libraries(minicar PRIVATE ${ESPEAK_NG_LIBRARY})
+        target_compile_definitions(main PRIVATE MINICAR_HAVE_ESPEAK=1)
+        target_link_libraries(main PRIVATE ${ESPEAK_NG_LIBRARY})
     endif()
 endif()
 
-target_compile_definitions(minicar PRIVATE MINICAR_ASSETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets")
+target_compile_definitions(main PRIVATE MINICAR_ASSETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets")
 
 if(MINICAR_BUILD_TESTS)
     include(CTest)
