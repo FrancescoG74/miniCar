@@ -14,7 +14,7 @@ Before you start, ensure you have:
 - [ ] Or manually:
   ```bash
   sudo apt install build-essential cmake ninja-build \
-      libsdl2-dev libsdl2-ttf-dev libcatch2-dev libespeak-ng1
+      libsdl3-dev libsdl3-ttf-dev libcatch2-dev libespeak-ng1
   ```
 - [ ] Verify: `cmake --version`, `ninja --version`
 
@@ -23,7 +23,7 @@ Before you start, ensure you have:
 - [ ] Run: `bash setup.sh`
 - [ ] Or manually:
   ```bash
-  brew install cmake ninja sdl2 sdl2_ttf catch2
+  brew install cmake ninja sdl3 sdl3_ttf catch2
   ```
 - [ ] Verify: `cmake --version`, `ninja --version`
 
@@ -34,10 +34,10 @@ Before you start, ensure you have:
   # Using Chocolatey
   choco install cmake ninja
   
-  # For SDL2, use vcpkg:
+  # For SDL3, use vcpkg:
   git clone https://github.com/microsoft/vcpkg
   .\vcpkg\bootstrap-vcpkg.bat
-  .\vcpkg\vcpkg install sdl2 sdl2-ttf catch2
+  .\vcpkg\vcpkg install sdl3 sdl3-ttf catch2
   ```
 
 ## 📱 Android Development Setup
@@ -183,7 +183,7 @@ ctest --test-dir build --output-on-failure
 ### CMake Issues
 - [ ] Clear build directory: `rm -rf build` (Unix) or `rmdir /s build` (Windows)
 - [ ] Reconfigure: `cmake -S . -B build -G Ninja`
-- [ ] Check for correct SDL2 installation
+- [ ] Check for correct SDL3 installation
 
 ### Gradle Issues
 - [ ] Clean: `./gradlew clean`

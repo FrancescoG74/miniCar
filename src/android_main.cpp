@@ -1,7 +1,7 @@
 #ifdef ANDROID
 
 #include <android/log.h>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include "game/Game.h"
 
 // Android log tag
@@ -9,14 +9,7 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-// Entry point for Android. SDL2 requires a specific entry point for Android apps.
-// This function is called by the Android NDK instead of main().
-extern "C" void SDL_Android_Init(void);
-
-extern "C" int SDL_main(int argc, char* argv[]) {
-    // Initialize the Android-specific SDL subsystem
-    SDL_Android_Init();
-
+extern "C" int SDL_main(int /*argc*/, char* /*argv*/[]) {
     LOGI("Starting miniCar on Android");
 
     try {

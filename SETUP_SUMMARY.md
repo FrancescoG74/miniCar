@@ -15,7 +15,7 @@ miniCar is now a true cross-platform game that can be built using:
 
 #### CMakeLists.txt (MODIFIED)
 - Added Android platform detection (`if(ANDROID)`)
-- Platform-specific SDL2 find_package configuration
+- Platform-specific SDL3 find_package configuration
 - Conditional compilation for espeak-ng (desktop-only)
 - Platform-specific entry point selection
 - Android NDK library linking (android, log, android_app_glue)
@@ -51,7 +51,7 @@ CMake preset configurations for different platforms:
 
 #### src/android_main.cpp (NEW)
 Android JNI entry point:
-- SDL2 Android initialization
+- SDL3 Android initialization
 - Android logging support
 - Game initialization adapted for Android (1280×720)
 - Exception handling with Android logging
@@ -74,7 +74,7 @@ Android application manifest:
 Android Activity implementation:
 - Extends SDLActivity
 - Handles JNI interface
-- Minimal Java code (SDL2 handles most)
+- Minimal Java code (SDL3 handles most)
 
 #### src/main/res/values/strings.xml (NEW)
 Android string resources:
@@ -98,7 +98,7 @@ Gradle wrapper script for Windows
 #### proguard-rules.pro (NEW)
 ProGuard rules for:
 - Preserving JNI methods
-- Keeping SDL2 Activity
+- Keeping SDL3 Activity
 - Keeping MainActivity
 
 #### local.properties (NEW)
@@ -285,7 +285,7 @@ Potential improvements:
 ### Desktop
 - CMake 3.16+
 - Ninja or Make
-- SDL2 and SDL2_ttf
+- SDL3 and SDL3_ttf
 - Catch2 (for tests)
 - libespeak-ng (optional, Linux only)
 

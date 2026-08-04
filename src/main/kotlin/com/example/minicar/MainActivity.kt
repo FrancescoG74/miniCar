@@ -7,7 +7,7 @@ import org.libsdl.app.SDLActivity
 /**
  * MainActivity for miniCar Android application.
  * 
- * This class extends SDLActivity from the SDL2 Android library, which handles:
+ * This class extends SDLActivity from the SDL3 Android library, which handles:
  * - Loading the native library
  * - Setting up the SDL environment
  * - Managing the game lifecycle
@@ -18,7 +18,7 @@ class MainActivity : SDLActivity() {
     companion object {
         // Library name - must match the CMakeLists.txt project name
         init {
-            // SDL2 handles loading the native library automatically through JNI
+            // SDL3 handles loading the native library automatically through JNI
         }
     }
 

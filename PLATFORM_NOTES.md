@@ -17,7 +17,7 @@ miniCar's architecture is designed to support multiple platforms with minimal pl
 ├─────────────────────────────────────────────────┤
 │  Track Math  │  Collision  │  Actors  │  Input  │
 ├─────────────────────────────────────────────────┤
-│              SDL2 / SDL2_ttf                    │
+│              SDL3 / SDL3_ttf                    │
 ├─────────────────────────────────────────────────┤
 ```
 
@@ -70,7 +70,7 @@ endif()
 | Aspect | Details |
 |--------|---------|
 | Entry Point | `src/main.cpp` → `Game::init()` → `Game::run()` |
-| Window | SDL2 creates a native window (1600×900) |
+| Window | SDL3 creates a native window (1600×900) |
 | Audio | Full SDL audio support, optional espeak-ng |
 | Input | SDL keyboard events + user input mapping |
 | Tests | Full unit test suite with Catch2 |
@@ -88,7 +88,7 @@ endif()
 | Aspect | Details |
 |--------|---------|
 | Entry Point | `src/android_main.cpp` → JNI → SDL_main → `Game::init()` |
-| Window | SDL2 uses Android's SurfaceView |
+| Window | SDL3 uses Android's SurfaceView |
 | Audio | SDL audio only, beep tones (no espeak-ng) |
 | Input | Android keyboard events via SDL |
 | Tests | Not supported (headless only) |
@@ -130,18 +130,14 @@ FILE* f = fopen("/usr/share/fonts/truetype/...", "r");
 TTF_Font* font = TTF_OpenFont("Arial.ttf", 28);
 ```
 
-### 3. SDL2 Initialization
+### 3. SDL3 Initialization
 
-**Android-specific:** SDL2 on Android requires:
-- JNI interface via SDL_main
-- Native app glue library
-- Proper activity configuration in AndroidManifest.xml
+**Android-specific:** SDL3 handles Android initialization automatically. `SDL_Android_Init()` is no longer required.
 
 ```cpp
 // android_main.cpp
-extern "C" void SDL_Android_Init(void);
 extern "C" int SDL_main(int argc, char* argv[]) {
-    SDL_Android_Init();  // Required on Android
+    // SDL3 handles initialization automatically
     // ... game initialization
 }
 ```
@@ -217,7 +213,7 @@ adb logcat  # View Android logs
 
 ```bash
 sudo apt install build-essential cmake ninja-build \
-    libsdl2-dev libsdl2-ttf-dev libcatch2-dev libespeak-ng1
+    libsdl3-dev libsdl3-ttf-dev libcatch2-dev libespeak-ng1
 
 # Android (also install Android Studio + NDK)
 ```
@@ -225,7 +221,7 @@ sudo apt install build-essential cmake ninja-build \
 ### macOS Development
 
 ```bash
-brew install cmake ninja sdl2 sdl2_ttf catch2
+brew install cmake ninja sdl3 sdl3_ttf catch2
 
 # Android (also install Android Studio + NDK)
 ```
@@ -234,7 +230,7 @@ brew install cmake ninja sdl2 sdl2_ttf catch2
 
 ```powershell
 # Using vcpkg
-vcpkg install sdl2 sdl2-ttf catch2
+vcpkg install sdl3 sdl3-ttf catch2
 
 # Android (also install Android Studio + NDK)
 ```
@@ -276,6 +272,6 @@ vcpkg install sdl2 sdl2-ttf catch2
 
 - [CMake Android Toolchain](https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#android)
 - [Android NDK Documentation](https://developer.android.com/ndk/guides)
-- [SDL2 Android Support](https://wiki.libsdl.org/SDL2/README/android)
+- [SDL3 Android Support](https://wiki.libsdl.org/SDL3/README/android)
 - [Android Gradle Plugin Guide](https://developer.android.com/studio/build)
 

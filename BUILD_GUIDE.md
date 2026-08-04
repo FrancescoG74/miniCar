@@ -24,7 +24,7 @@ cmake --build build
 
 ```bash
 sudo apt install build-essential cmake ninja-build \
-                 libsdl2-dev libsdl2-ttf-dev \
+                 libsdl3-dev libsdl3-ttf-dev \
                  libcatch2-dev \
                  libespeak-ng1
 ```
@@ -32,13 +32,13 @@ sudo apt install build-essential cmake ninja-build \
 ### macOS (Homebrew)
 
 ```bash
-brew install cmake ninja sdl2 sdl2_ttf catch2
+brew install cmake ninja sdl3 sdl3_ttf catch2
 ```
 
 ### Windows (vcpkg)
 
 ```powershell
-vcpkg install sdl2 sdl2-ttf catch2
+vcpkg install sdl3 sdl3-ttf catch2
 ```
 
 Then configure with your vcpkg toolchain:
@@ -190,11 +190,11 @@ Solution: Set `ANDROID_NDK_HOME` environment variable or configure in `local.pro
 ndk.dir=<path-to-android-sdk>/ndk/30.0.15729638
 ```
 
-**SDL2 Not Found:**
+**SDL3 Not Found:**
 ```
-Error: Could not find SDL2
+Error: Could not find SDL3
 ```
-Solution: The Android NDK toolchain will fetch SDL2 automatically. Ensure you have a valid NDK installation.
+Solution: The Android NDK toolchain will fetch SDL3 automatically. Ensure you have a valid NDK installation.
 
 **Gradle Build Fails:**
 - Clean the project: `./gradlew clean`
@@ -209,10 +209,10 @@ brew install cmake      # macOS
 choco install cmake     # Windows (with Chocolatey)
 ```
 
-**SDL2 Headers Not Found:**
-- Ensure SDL2 dev packages are installed
-- On Linux: `sudo apt install libsdl2-dev libsdl2-ttf-dev`
-- On macOS: `brew install sdl2 sdl2_ttf`
+**SDL3 Headers Not Found:**
+- Ensure SDL3 dev packages are installed
+- On Linux: `sudo apt install libsdl3-dev libsdl3-ttf-dev`
+- On macOS: `brew install sdl3 sdl3_ttf`
 
 ## Testing
 
@@ -264,6 +264,6 @@ When adding new platform-specific code:
 
 - [CMake Android Documentation](https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android)
 - [Android NDK Documentation](https://developer.android.com/ndk/guides)
-- [SDL2 Android Setup](https://wiki.libsdl.org/SDL2/README/android)
+- [SDL3 Android Setup](https://wiki.libsdl.org/SDL3/README/android)
 - [Gradle Android Plugin](https://developer.android.com/studio/build)
 

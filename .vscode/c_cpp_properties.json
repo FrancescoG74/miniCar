@@ -4,8 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/include",
-                "/usr/include/SDL2",
-                "/usr/local/include/SDL2"
+                "/usr/include/SDL3",
+                "/usr/local/include/SDL3"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/g++",
@@ -18,8 +18,8 @@
             "name": "macOS",
             "includePath": [
                 "${workspaceFolder}/include",
-                "/usr/local/include/SDL2",
-                "/opt/homebrew/include/SDL2"
+                "/usr/local/include/SDL3",
+                "/opt/homebrew/include/SDL3"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang++",
@@ -32,7 +32,7 @@
             "name": "Windows",
             "includePath": [
                 "${workspaceFolder}/include",
-                "C:/vcpkg/packages/sdl2_x64-windows/include"
+                "C:/vcpkg/packages/sdl3_x64-windows/include"
             ],
             "defines": ["_WINDOWS"],
             "compilerPath": "C:/Program Files/LLVM/bin/clang.exe",
