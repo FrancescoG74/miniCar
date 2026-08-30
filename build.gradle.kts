@@ -5,11 +5,11 @@ plugins {
 
 android {
     namespace = "com.example.minicar"
-    compileSdk = 33
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.example.minicar"
         minSdk = 29
-        targetSdk = 33
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 

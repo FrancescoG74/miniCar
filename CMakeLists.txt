@@ -89,6 +89,7 @@ if(ANDROID)
             src/game/GamePhases.cpp
             src/game/WorldRenderer.cpp
             src/game/HudRenderer.cpp
+            src/game/TouchControls.cpp
     )
 else()
     add_executable(main
@@ -101,6 +102,7 @@ else()
             src/game/GamePhases.cpp
             src/game/WorldRenderer.cpp
             src/game/HudRenderer.cpp
+            src/game/TouchControls.cpp
     )
 endif()
 

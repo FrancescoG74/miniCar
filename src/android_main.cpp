@@ -15,10 +15,14 @@ extern "C" int SDL_main(int /*argc*/, char* /*argv*/[]) {
     try {
         Game game;
 
-        // On Android, use fullscreen dimensions
-        // These can be adjusted based on device capabilities
-        int windowWidth = 1280;
-        int windowHeight = 720;
+        // The world/HUD layout uses hardcoded pixel constants authored for a
+        // 1600x900 canvas (see Game::kTrackCenterX/Y). Requesting that same
+        // logical size here -- matching desktop's main.cpp -- keeps the
+        // circuit centered; Setup.cpp's SDL_SetRenderLogicalPresentation then
+        // letterbox-scales it onto the device's actual screen resolution,
+        // whatever that turns out to be.
+        int windowWidth = 1600;
+        int windowHeight = 900;
 
         if (!game.init(windowWidth, windowHeight, "miniCar")) {
             LOGE("Failed to initialize game");

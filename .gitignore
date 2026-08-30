@@ -6,6 +6,7 @@ build/
 *.iml
 .externalNativeBuild/
 captures/
+.idea/
 
 # IDE specific files (IntelliJ / Android Studio)
 .idea/workspace.xml
