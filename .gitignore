@@ -1,1 +1,46 @@
+# Build artifacts
 build/
+.gradle/
+/local.properties
+.cxx/
+*.iml
+.externalNativeBuild/
+captures/
+.idea/
+
+# IDE specific files (IntelliJ / Android Studio)
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetSelector.xml
+.idea/caches/
+.idea/shelf/
+.idea/libraries/
+.idea/modules.xml
+.idea/navEditor.xml
+.idea/appInsightsSettings.xml
+.idea/deviceManager.xml
+.idea/vcs.xml
+.idea/compiler.xml
+.idea/migrations.xml
+.idea/markdown.xml
+.idea/AndroidProjectSystem.xml
+*.iws
+
+# VS Code specific files
+.vscode/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# User specific or temporary files
+.mcp.json
+.bashrc
+.zshrc
+.profile
+.zprofile
+.bash_profile
+.gitconfig
+.ripgreprc

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #include <array>
 #include <memory>
 #include <string>
@@ -16,6 +17,7 @@
 #include "audio/Announcer.h"
 #include "game/HudRenderer.h"
 #include "game/RaceSession.h"
+#include "game/TouchControls.h"
 
 class GameState;
 
@@ -127,6 +129,11 @@ public:
 
     // Menu selections; edited by MenuState, consumed by startRace().
     RaceSetupOptions raceSetup;
+
+    // Virtual on-screen steering/pedals for touchscreens. Enabled when a
+    // touch device is detected (always on Android); rendered/handled by
+    // RacingState.
+    TouchControls touchControls;
 
 private:
     void pollEvents();

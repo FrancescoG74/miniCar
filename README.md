@@ -1,6 +1,6 @@
 # miniCar
 
-A tiny 2-player top-down racing game written in C++17 on top of SDL2. Six cars
+A tiny 2-player top-down racing game written in C++17 on top of SDL3. Six cars
 drive around a stadium-shaped circuit with rocks, cyclically-opening gates and a
 synthesized engine drone. Any AI car can be taken over as Player 1 (WASD) or
 Player 2 (IJKL).
@@ -14,7 +14,7 @@ actor, resolves collisions, then renders the world and the HUD.
 ### Layers
 
 - **App/platform** — [Setup](include/Setup.h) owns window, renderer, font and
-  SDL/SDL_ttf lifetime through `initApp` / `shutdownApp`.
+  SDL/SDL3_ttf lifetime through `initApp` / `shutdownApp`.
 - **Game/application** — [Game](include/game/Game.h) owns the SDL-facing
   resources, runs the loop, and delegates its countdown, racing, and finished
   modes to `GameState` implementations.
@@ -92,8 +92,8 @@ flowchart LR
 
 - A C++17 compiler (GCC, Clang or MSVC).
 - CMake ≥ 3.16 and a build tool (Ninja or Make).
-- SDL2 development headers/libraries.
-- SDL2_ttf development headers/libraries.
+- SDL3 development headers/libraries.
+- SDL3_ttf development headers/libraries.
 - Catch2 v3 development package, when building the default unit-test suite.
 - *(Optional)* `libespeak-ng` runtime library, for a spoken ("3", "2", "1", "Go")
   pre-race countdown instead of plain beep tones. `CMakeLists.txt` auto-detects
@@ -105,7 +105,7 @@ Install on Debian/Ubuntu:
 
 ```bash
 sudo apt install build-essential cmake ninja-build \
-                 libsdl2-dev libsdl2-ttf-dev \
+                 libsdl3-dev libsdl3-ttf-dev \
                  libcatch2-dev \
                  libespeak-ng1  # optional, for the spoken countdown
 ```
@@ -113,19 +113,19 @@ sudo apt install build-essential cmake ninja-build \
 Install on Fedora:
 
 ```bash
-sudo dnf install gcc-c++ cmake ninja-build SDL2-devel SDL2_ttf-devel
+sudo dnf install gcc-c++ cmake ninja-build SDL3-devel SDL3_ttf-devel
 ```
 
 Install on macOS (Homebrew):
 
 ```bash
-brew install cmake ninja sdl2 sdl2_ttf
+brew install cmake ninja sdl3 sdl3_ttf
 ```
 
 On Windows the easiest path is [vcpkg](https://github.com/microsoft/vcpkg):
 
 ```powershell
-vcpkg install sdl2 sdl2-ttf
+vcpkg install sdl3 sdl3-ttf
 ```
 
 and then point CMake at the vcpkg toolchain file.

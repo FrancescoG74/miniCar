@@ -58,6 +58,13 @@ bool Game::init(int width, int height, const char* title) {
     voiceAvailable = voice.init();
     announcer = Announcer::create(&voice, &uiSound, voiceAvailable);
 
+    touchControls.layout(windowWidth, windowHeight);
+    // The virtual on-screen controller is only meant for the Android build;
+    // desktop (Linux/Windows/etc.) always uses keyboard input.
+#ifdef ANDROID
+    touchControls.enabled = true;
+#endif
+
     raceSetup.laps = m_raceTuning.lapsToWin;
     showMenu();
     return true;
@@ -202,12 +209,23 @@ void Game::pollEvents() {
             continue;
         }
 
+        // Route finger events to the virtual controller regardless of game
+        // state; RacingState is the only one that reads the resulting button
+        // states, but hit-testing here keeps the logic in one place.
+        if (event.type == SDL_EVENT_FINGER_DOWN || event.type == SDL_EVENT_FINGER_MOTION ||
+            event.type == SDL_EVENT_FINGER_UP || event.type == SDL_EVENT_FINGER_CANCELED) {
+            SDL_Event converted = event;
+            SDL_ConvertEventToRenderCoordinates(app.renderer, &converted);
+            touchControls.handleEvent(converted);
+        }
+
         if (event.type == SDL_EVENT_KEY_DOWN && !(m_state && m_state->ownsInput())) {
             SDL_Keycode k = event.key.key;
 
             // Universal keys handled by Game, not by any state. Suppressed
             // while a state (e.g. the menu) wants to own all keyboard input.
-            if (k == SDLK_ESCAPE) {
+            // SDLK_AC_BACK is the Android hardware/gesture back button.
+            if (k == SDLK_ESCAPE || k == SDLK_AC_BACK) {
                 m_running = false;
                 continue;
             }
@@ -267,6 +285,11 @@ void Game::renderFrame() {
         HudRenderer::renderLabel(renderer, player1LabelTexture.get(), player1LabelRect);
         HudRenderer::renderLabel(renderer, player2LabelTexture.get(), player2LabelRect);
         HudRenderer::renderLeaderboard(renderer, windowWidth, m_race->cars(), carHud);
+
+        // Drawn whenever the world is visible (Countdown/Racing/Finished) so
+        // the player can see where the buttons are even before the race
+        // starts, not just during RacingState.
+        touchControls.render(renderer);
     }
 
     if (m_state) m_state->renderOverlay(*this);

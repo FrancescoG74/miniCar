@@ -44,6 +44,14 @@ bool initApp(AppWindow& app, int width, int height, const char* title) {
         return false;
     }
 
+    // Renders as if the output were always `width`x`height`, then lets SDL
+    // scale/letterbox that onto whatever the real window/display resolution
+    // turns out to be. This keeps the (hardcoded, pixel-based) track and HUD
+    // layout centered and screen-filling on any device -- critical on
+    // Android, where the requested window size is not necessarily the actual
+    // screen resolution.
+    SDL_SetRenderLogicalPresentation(app.renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+
     if (app.ttfInitialized) {
         app.font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28);
         if (!app.font) {
