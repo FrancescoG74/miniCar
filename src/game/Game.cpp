@@ -59,15 +59,11 @@ bool Game::init(int width, int height, const char* title) {
     announcer = Announcer::create(&voice, &uiSound, voiceAvailable);
 
     touchControls.layout(windowWidth, windowHeight);
-    // Belt-and-suspenders: always on for Android builds, and also auto-detect
-    // a touch device on any other platform (e.g. a touchscreen laptop/tablet).
+    // The virtual on-screen controller is only meant for the Android build;
+    // desktop (Linux/Windows/etc.) always uses keyboard input.
 #ifdef ANDROID
     touchControls.enabled = true;
 #endif
-    int touchDeviceCount = 0;
-    SDL_TouchID* touchDevices = SDL_GetTouchDevices(&touchDeviceCount);
-    if (touchDevices) SDL_free(touchDevices);
-    if (touchDeviceCount > 0) touchControls.enabled = true;
 
     raceSetup.laps = m_raceTuning.lapsToWin;
     showMenu();
