@@ -161,14 +161,16 @@ void Game::startRace() {
 void Game::rebuildPlayerLabels() {
     player1LabelRect = SDL_FRect{ 20, 20, 0, 0 };
     if (const auto& player1Index = m_race->player1Index()) {
-        player1LabelTexture = makeLabelTexture("Player 1",
+        const std::string label = std::string("Player 1: ") + m_race->cars()[*player1Index].getName();
+        player1LabelTexture = makeLabelTexture(label.c_str(),
                                                 m_race->cars()[*player1Index].getColor(), player1LabelRect);
     } else {
         player1LabelTexture.reset();
     }
     player2LabelRect = SDL_FRect{ 20, player1LabelRect.y + player1LabelRect.h + 14, 0, 0 };
     if (const auto& player2Index = m_race->player2Index()) {
-        player2LabelTexture = makeLabelTexture("Player 2",
+        const std::string label = std::string("Player 2: ") + m_race->cars()[*player2Index].getName();
+        player2LabelTexture = makeLabelTexture(label.c_str(),
                                                 m_race->cars()[*player2Index].getColor(), player2LabelRect);
         player2LabelRect.y = player1LabelRect.y + player1LabelRect.h + 14;
     } else {
@@ -180,8 +182,15 @@ void Game::refreshLapTextures() {
     const auto& cars = m_race->cars();
     for (size_t i = 0; i < cars.size(); ++i) {
         if (cars[i].laps == carHud[i].lastLaps) continue;
-        std::string text = std::string(cars[i].getName()) + ": Lap " +
-                            std::to_string(cars[i].laps);
+        std::string text;
+        switch (cars[i].driver()) {
+            case DriverKind::Player1: text = "P1 - "; break;
+            case DriverKind::Player2: text = "P2 - "; break;
+            case DriverKind::Ai: text = "AI - "; break;
+        }
+        text += cars[i].getName();
+        text += ": Lap ";
+        text += std::to_string(cars[i].laps);
         carHud[i].texture = makeLabelTexture(text.c_str(), cars[i].getColor(), carHud[i].rect);
         carHud[i].lastLaps = cars[i].laps;
     }
@@ -297,12 +306,13 @@ void Game::renderFrame() {
     SDL_RenderPresent(renderer);
 }
 
-void Game::synchronizeEngineSound() {
+void Game::synchronizeEngineSound(float dt) {
     const auto& cars = m_race->cars();
     for (std::size_t index = 0; index < cars.size(); ++index) {
         engineSound.setCarSpeed(static_cast<int>(index),
                                 cars[index].speed / m_race->tuning().maxCarSpeed);
     }
+    engineSound.update(dt);
 }
 
 void Game::updateWindowTitle() {
