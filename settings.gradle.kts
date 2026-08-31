@@ -6,8 +6,8 @@ pluginManagement {
     }
     // ADD THIS BLOCK:
     plugins {
-        id("com.android.application") version "9.3.1" // Use a version compatible with your Android Studio
-        id("com.android.library") version "9.3.1"
+        id("com.android.application") version "9.3.2" // Use a version compatible with your Android Studio
+        id("com.android.library") version "9.3.2"
         id("org.jetbrains.kotlin.android") version "2.2.10"
     }
 }

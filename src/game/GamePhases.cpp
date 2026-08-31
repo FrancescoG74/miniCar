@@ -222,10 +222,13 @@ void CountdownState::onEnter(Game& game) {
 void CountdownState::update(Game& game, float dt) {
     game.countdownTimer = std::max(0.0f, game.countdownTimer - dt);
 
-    // Engines idle silently -- no way to jump the start.
+    // Engines idle silently -- no way to jump the start. Still call
+    // synchronizeEngineSound() every frame so the stream keeps getting fed
+    // (and any residual revs from a previous race decay smoothly to idle).
     for (size_t i = 0; i < game.race().cars().size(); ++i) {
         game.engineSound.setCarSpeed(static_cast<int>(i), 0.0f);
     }
+    game.engineSound.update(dt);
 
     // Rebuild the number texture and cue audio each time the displayed digit
     // changes (once per second, effectively).
@@ -293,7 +296,7 @@ void RacingState::update(Game& game, float dt) {
     }
 
     game.race().update(dt, keys);
-    game.synchronizeEngineSound();
+    game.synchronizeEngineSound(dt);
     game.refreshLapTextures();
 
     if (game.race().winnerIndex()) {
@@ -323,10 +326,11 @@ void FinishedState::onEnter(Game& game) {
     game.winnerHintRect.y = game.winnerRect.y + game.winnerRect.h + 16.0f;
 }
 
-void FinishedState::update(Game& game, float /*dt*/) {
+void FinishedState::update(Game& game, float dt) {
     for (size_t i = 0; i < game.race().cars().size(); ++i) {
         game.engineSound.setCarSpeed(static_cast<int>(i), 0.0f);
     }
+    game.engineSound.update(dt);
     game.refreshLapTextures();
 }
 

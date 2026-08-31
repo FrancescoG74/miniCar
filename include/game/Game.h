@@ -78,7 +78,11 @@ public:
 
     RaceSession& race() { return *m_race; }
     const RaceSession& race() const { return *m_race; }
-    void synchronizeEngineSound();
+    // Sets each car's target engine pitch/volume from its current speed and
+    // synthesizes exactly `dt` seconds of audio. Call once per frame from
+    // whichever GameState is active (racing or otherwise) so the engines
+    // idle down smoothly instead of just cutting to silence.
+    void synchronizeEngineSound(float dt);
 
     // -- Rendering helpers ------------------------------------------------
     // Rebuilds any car's lap texture whose lap count changed. Called every frame.
