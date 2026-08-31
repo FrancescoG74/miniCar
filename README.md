@@ -107,6 +107,15 @@ flowchart LR
   package/headers); if it's not found the game still builds fine and just uses
   beeps.
 
+The HUD font (`DejaVuSans-Bold.ttf`, [Bitstream Vera license](assets/LICENSE-DejaVuSans.txt))
+is bundled directly in [assets/](assets/) and [src/main/assets/](src/main/assets/)
+rather than relying on a system font path -- earlier versions hardcoded a
+Debian-only path (`/usr/share/fonts/truetype/dejavu/...`), so player labels
+and lap counters silently failed to render on every other platform, including
+Android. `Setup::initApp` now always loads the bundled copy: via
+`MINICAR_ASSETS_DIR` on desktop, or through SDL's asset-manager-backed
+`SDL_IOStream` on Android (see `openHudFont` in [src/Setup.cpp](src/Setup.cpp)).
+
 Install on Debian/Ubuntu:
 
 ```bash
