@@ -111,7 +111,7 @@ Install on Debian/Ubuntu:
 
 ```bash
 sudo apt install build-essential cmake ninja-build \
-                 libsdl3-dev libsdl3-ttf-dev \
+                 libsdl3-dev libsdl3-ttf-dev libsdl3-image-dev \
                  libcatch2-dev \
                  libespeak-ng1  # optional, for the spoken countdown
 ```
