@@ -77,9 +77,10 @@ else()
     target_link_libraries(minicar_core PUBLIC ${SDL3_LIBRARIES})
 endif()
 
-# --- MAIN EXECUTABLE / SHARED LIBRARY ---
+# --- MAIN TARGET ---
 if(ANDROID)
     add_library(main SHARED
+            src/android_main.cpp
             src/Audio.cpp
             src/Voice.cpp
             src/Setup.cpp
@@ -88,7 +89,7 @@ if(ANDROID)
             src/game/GamePhases.cpp
             src/game/WorldRenderer.cpp
             src/game/HudRenderer.cpp
-            src/android_main.cpp
+            src/game/TouchControls.cpp
     )
     target_link_libraries(main PRIVATE log)
 else()
@@ -102,6 +103,7 @@ else()
             src/game/GamePhases.cpp
             src/game/WorldRenderer.cpp
             src/game/HudRenderer.cpp
+            src/game/TouchControls.cpp
     )
 endif()
 

@@ -2,7 +2,6 @@
 
 #include <android/log.h>
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
 #include "game/Game.h"
 
 // Android log tag
@@ -10,11 +9,7 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-// Entry point for Android.
-extern "C" int SDL_main(int argc, char* argv[]) {
-    (void)argc;
-    (void)argv;
-
+extern "C" int SDL_main(int /*argc*/, char* /*argv*/[]) {
     LOGI("Starting miniCar on Android");
 
     try {

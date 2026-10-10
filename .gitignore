@@ -1,5 +1,22 @@
+# Build artifacts
 build/
+buildLinux/
 .gradle/
-.cxx/
 local.properties
+.cxx/
 *.iml
+.externalNativeBuild/
+captures/
+.idea/
+
+# IDE specific files
+.idea/workspace.xml
+.idea/caches/
+.idea/libraries/
+
+# VS Code
+.vscode/
+
+# OS specific files
+.DS_Store
+Thumbs.db

@@ -217,9 +217,9 @@ miniCar/
 - [CMake Android Toolchain](https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#android)
 - [Ninja Build System](https://ninja-build.org/)
 
-### SDL2
-- [SDL2 Documentation](https://wiki.libsdl.org/SDL2)
-- [SDL2 Android Setup](https://wiki.libsdl.org/SDL2/README/android)
+### SDL3
+- [SDL3 Documentation](https://wiki.libsdl.org/SDL3)
+- [SDL3 Android Setup](https://wiki.libsdl.org/SDL3/README/android)
 
 ### Android Development
 - [Android Developer Docs](https://developer.android.com/docs)

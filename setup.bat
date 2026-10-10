@@ -48,15 +48,15 @@ if %MISSING% equ 1 (
     echo Option 1: Using Chocolatey
     echo   choco install cmake ninja
     echo.
-    echo Option 2: Using vcpkg (recommended for SDL2)
+    echo Option 2: Using vcpkg (recommended for SDL3)
     echo   git clone https://github.com/microsoft/vcpkg
     echo   .\vcpkg\bootstrap-vcpkg.bat
-    echo   .\vcpkg\vcpkg install sdl2 sdl2-ttf catch2
+    echo   .\vcpkg\vcpkg install sdl3 sdl3-ttf catch2
     echo.
     echo Option 3: Manual installation
     echo   - Download and install CMake from https://cmake.org
     echo   - Download and install Ninja from https://github.com/ninja-build/ninja
-    echo   - Use vcpkg or manual setup for SDL2
+    echo   - Use vcpkg or manual setup for SDL3
     echo.
     pause
     exit /b 1

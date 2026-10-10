@@ -2,11 +2,14 @@
 
 #include <SDL3/SDL.h>
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstring>
 #include <string>
 
 #include "CollisionSystem.h"
 #include "game/Game.h"
+#include "input/KeyboardInput.h"
 
 // ==========================================================================
 // MenuState
@@ -110,6 +113,7 @@ void MenuState::handleEvent(Game& game, const SDL_Event& event) {
 
     switch (event.key.key) {
     case SDLK_ESCAPE:
+    case SDLK_AC_BACK: // Android back button/gesture
         game.quit();
         break;
     case SDLK_UP:
@@ -218,10 +222,13 @@ void CountdownState::onEnter(Game& game) {
 void CountdownState::update(Game& game, float dt) {
     game.countdownTimer = std::max(0.0f, game.countdownTimer - dt);
 
-    // Engines idle silently -- no way to jump the start.
+    // Engines idle silently -- no way to jump the start. Still call
+    // synchronizeEngineSound() every frame so the stream keeps getting fed
+    // (and any residual revs from a previous race decay smoothly to idle).
     for (size_t i = 0; i < game.race().cars().size(); ++i) {
         game.engineSound.setCarSpeed(static_cast<int>(i), 0.0f);
     }
+    game.engineSound.update(dt);
 
     // Rebuild the number texture and cue audio each time the displayed digit
     // changes (once per second, effectively).
@@ -273,8 +280,23 @@ void RacingState::update(Game& game, float dt) {
     // Convert bool* to Uint8* for RaceSession API (SDL_SCANCODE values are 0-based indices)
     // This is safe because we're just using the array as a key state lookup table
     const Uint8* keys = reinterpret_cast<const Uint8*>(boolKeys);
+
+    // Fold the virtual on-screen buttons into a copy of the keyboard state so
+    // Player 1's existing WASD KeyboardInput drives them identically, whether
+    // the accelerate/brake/steer signal came from a physical key or a finger.
+    std::array<Uint8, SDL_SCANCODE_COUNT> combinedKeys{};
+    if (game.touchControls.enabled) {
+        std::memcpy(combinedKeys.data(), keys, combinedKeys.size());
+        const KeyboardInput::Scheme scheme = KeyboardInput::wasd();
+        if (game.touchControls.accelerate()) combinedKeys[scheme.accelerate] = 1;
+        if (game.touchControls.brake()) combinedKeys[scheme.brake] = 1;
+        if (game.touchControls.left()) combinedKeys[scheme.left] = 1;
+        if (game.touchControls.right()) combinedKeys[scheme.right] = 1;
+        keys = combinedKeys.data();
+    }
+
     game.race().update(dt, keys);
-    game.synchronizeEngineSound();
+    game.synchronizeEngineSound(dt);
     game.refreshLapTextures();
 
     if (game.race().winnerIndex()) {
@@ -304,10 +326,11 @@ void FinishedState::onEnter(Game& game) {
     game.winnerHintRect.y = game.winnerRect.y + game.winnerRect.h + 16.0f;
 }
 
-void FinishedState::update(Game& game, float /*dt*/) {
+void FinishedState::update(Game& game, float dt) {
     for (size_t i = 0; i < game.race().cars().size(); ++i) {
         game.engineSound.setCarSpeed(static_cast<int>(i), 0.0f);
     }
+    game.engineSound.update(dt);
     game.refreshLapTextures();
 }
 

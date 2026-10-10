@@ -1,12 +1,12 @@
 <component name="libraryTable">
   <library name="Gradle: androidx.appcompat:appcompat:1.6.1@aar" external-system-id="GRADLE">
     <ANNOTATIONS>
-      <root url="jar://$USER_HOME$/.gradle/caches/9.8.1/transforms/742ef09a1a5fd3b9dcfff70ae956352a/transformed/appcompat-1.6.1/annotations.zip!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-3/ae3ffacbbaf2d7a4043ffab9c588e65d/transformed/appcompat-1.6.1/annotations.zip!/" />
     </ANNOTATIONS>
     <CLASSES>
-      <root url="file://$USER_HOME$/.gradle/caches/9.8.1/transforms/742ef09a1a5fd3b9dcfff70ae956352a/transformed/appcompat-1.6.1/AndroidManifest.xml" />
-      <root url="file://$USER_HOME$/.gradle/caches/9.8.1/transforms/742ef09a1a5fd3b9dcfff70ae956352a/transformed/appcompat-1.6.1/res" />
-      <root url="jar://$USER_HOME$/.gradle/caches/9.8.1/transforms/742ef09a1a5fd3b9dcfff70ae956352a/transformed/appcompat-1.6.1/jars/classes.jar!/" />
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-3/ae3ffacbbaf2d7a4043ffab9c588e65d/transformed/appcompat-1.6.1/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/ae3ffacbbaf2d7a4043ffab9c588e65d/transformed/appcompat-1.6.1/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/ae3ffacbbaf2d7a4043ffab9c588e65d/transformed/appcompat-1.6.1/AndroidManifest.xml" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>

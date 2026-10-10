@@ -50,7 +50,7 @@ if [ $MISSING -eq 1 ]; then
         echo "Installing for Debian/Ubuntu..."
         sudo apt update
         sudo apt install -y build-essential cmake ninja-build \
-                          libsdl2-dev libsdl2-ttf-dev \
+                          libsdl3-dev libsdl3-ttf-dev \
                           libcatch2-dev \
                           libespeak-ng1
         echo "✓ Dependencies installed"
@@ -60,7 +60,7 @@ if [ $MISSING -eq 1 ]; then
             echo "Installing Homebrew..."
             /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         fi
-        brew install cmake ninja sdl2 sdl2_ttf catch2
+        brew install cmake ninja sdl3 sdl3_ttf catch2
         echo "✓ Dependencies installed"
     fi
 else
