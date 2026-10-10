@@ -8,15 +8,40 @@ namespace {
 constexpr float kPi = 3.14159265358979323846f;
 }
 
-TEST_CASE("TrackGenerator alternates two reproducible race tracks", "[track]") {
-    const Track first = TrackGenerator::createForRace(0, 800.0f, 450.0f, 130.0f);
-    const Track second = TrackGenerator::createForRace(1, 800.0f, 450.0f, 130.0f);
-    const Track third = TrackGenerator::createForRace(2, 800.0f, 450.0f, 130.0f);
-    const Track fourth = TrackGenerator::createForRace(3, 800.0f, 450.0f, 130.0f);
+TEST_CASE("TrackGenerator cycles through ten reproducible race tracks", "[track]") {
+    TrackPoint starts[TrackGenerator::kTrackCount]{};
+    float trackLengths[TrackGenerator::kTrackCount]{};
+    for (std::size_t i = 0; i < TrackGenerator::kTrackCount; ++i) {
+        const Track track = TrackGenerator::createForRace(i, 800.0f, 450.0f, 130.0f);
+        const Track repeated = TrackGenerator::createForRace(
+            i + TrackGenerator::kTrackCount, 800.0f, 450.0f, 130.0f);
+        trackLengths[i] = track.totalLength();
+        starts[i] = track.sample(0.0f);
+        REQUIRE(track.totalLength() == Catch::Approx(repeated.totalLength()));
+        REQUIRE(starts[i].x == Catch::Approx(repeated.sample(0.0f).x));
+        REQUIRE(starts[i].y == Catch::Approx(repeated.sample(0.0f).y));
+    }
 
-    REQUIRE(first.totalLength() != Catch::Approx(second.totalLength()));
-    REQUIRE(first.totalLength() == Catch::Approx(third.totalLength()));
-    REQUIRE(second.totalLength() == Catch::Approx(fourth.totalLength()));
+    for (std::size_t i = 0; i < TrackGenerator::kTrackCount; ++i) {
+        for (std::size_t j = i + 1; j < TrackGenerator::kTrackCount; ++j) {
+            bool shapesDiffer = false;
+            const Track first = TrackGenerator::createForRace(i, 800.0f, 450.0f, 130.0f);
+            const Track second = TrackGenerator::createForRace(j, 800.0f, 450.0f, 130.0f);
+            for (int sampleIndex = 0; sampleIndex < 8; ++sampleIndex) {
+                const TrackPoint firstPoint = first.sample(
+                    trackLengths[i] * static_cast<float>(sampleIndex) / 8.0f);
+                const TrackPoint secondPoint = second.sample(
+                    trackLengths[j] * static_cast<float>(sampleIndex) / 8.0f);
+                const float dx = firstPoint.x - secondPoint.x;
+                const float dy = firstPoint.y - secondPoint.y;
+                if (dx * dx + dy * dy > 1.0f) shapesDiffer = true;
+            }
+            REQUIRE(shapesDiffer);
+        }
+    }
+
+    const Track irregular = TrackGenerator::createForRace(0, 800.0f, 450.0f, 130.0f);
+    REQUIRE(std::abs(irregular.sample(0.0f).angle) > 0.2f);
 }
 
 TEST_CASE("Track total length matches two straights plus two semicircles", "[track]") {

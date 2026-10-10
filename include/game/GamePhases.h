@@ -1,9 +1,11 @@
 #pragma once
 
 #include <SDL3/SDL.h>
+#include <array>
 
 #include "SdlRaii.h"
 #include "game/GameState.h"
+#include "game/TrackGenerator.h"
 
 // Pre-race setup screen: lets the player pick how many humans are driving
 // (0-2), their names, and the laps needed to win. Shown at startup and again
@@ -46,6 +48,13 @@ private:
     SDL_FRect m_titleRect{ 0, 0, 0, 0 };
     SDL_TexturePtr m_instructionsTexture;
     SDL_FRect m_instructionsRect{ 0, 0, 0, 0 };
+    SDL_TexturePtr m_galleryTitleTexture;
+    SDL_FRect m_galleryTitleRect{ 0, 0, 0, 0 };
+    SDL_TexturePtr m_galleryHintTexture;
+    SDL_FRect m_galleryHintRect{ 0, 0, 0, 0 };
+    std::array<SDL_TexturePtr, TrackGenerator::kTrackCount> m_trackLabels;
+    std::array<SDL_FRect, TrackGenerator::kTrackCount> m_trackLabelRects{};
+    bool m_showTrackGallery = false;
     Line m_lines[kFieldCount];
 };
 
