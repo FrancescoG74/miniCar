@@ -1,6 +1,7 @@
 #include "Setup.h"
 
 #include <iostream>
+#include <string>
 
 AppWindow::~AppWindow() {
     if (font) TTF_CloseFont(font);
@@ -9,6 +10,27 @@ AppWindow::~AppWindow() {
     if (ttfInitialized) TTF_Quit();
     if (sdlInitialized) SDL_Quit();
 }
+
+namespace {
+
+// Loads the bundled HUD font (assets/DejaVuSans-Bold.ttf). On Android the
+// font is packaged as an APK asset instead of a plain file on disk, so it
+// must be opened through SDL's asset-manager-backed SDL_IOStream (a relative
+// path handed to SDL_IOFromFile is read from the APK on that platform);
+// everywhere else it's just a file next to the other bundled assets
+// (rocks, etc.) referenced via MINICAR_ASSETS_DIR.
+TTF_Font* openHudFont(float pointSize) {
+#ifdef ANDROID
+    SDL_IOStream* io = SDL_IOFromFile("DejaVuSans-Bold.ttf", "rb");
+    if (!io) return nullptr;
+    return TTF_OpenFontIO(io, true, pointSize);
+#else
+    const std::string path = std::string(MINICAR_ASSETS_DIR) + "/DejaVuSans-Bold.ttf";
+    return TTF_OpenFont(path.c_str(), pointSize);
+#endif
+}
+
+} // namespace
 
 bool initApp(AppWindow& app, int width, int height, const char* title) {
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
@@ -53,9 +75,9 @@ bool initApp(AppWindow& app, int width, int height, const char* title) {
     SDL_SetRenderLogicalPresentation(app.renderer, width, height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
     if (app.ttfInitialized) {
-        app.font = TTF_OpenFont("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28);
+        app.font = openHudFont(28);
         if (!app.font) {
-            std::cerr << "TTF_OpenFont failed (continuing without on-screen labels): "
+            std::cerr << "Failed to load bundled HUD font (continuing without on-screen labels): "
                        << SDL_GetError() << std::endl;
         }
     }

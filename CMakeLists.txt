@@ -91,6 +91,7 @@ if(ANDROID)
             src/game/HudRenderer.cpp
             src/game/TouchControls.cpp
     )
+    target_link_libraries(main PRIVATE log)
 else()
     add_executable(main
             src/main.cpp
@@ -117,9 +118,6 @@ if(SDL3_IMAGE_INCLUDE_DIRS)
 endif()
 
 target_link_libraries(main PRIVATE minicar_core)
-if(ANDROID)
-    target_link_libraries(main PRIVATE log)
-endif()
 minicar_configure_quality(main)
 
 # --- LINKING ADDITIONAL LIBS ---
