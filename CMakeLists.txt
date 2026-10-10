@@ -77,18 +77,33 @@ else()
     target_link_libraries(minicar_core PUBLIC ${SDL3_LIBRARIES})
 endif()
 
-# --- MAIN EXECUTABLE ---
-add_executable(main SHARED
-        src/main.cpp
-        src/Audio.cpp
-        src/Voice.cpp
-        src/Setup.cpp
-        src/audio/Announcer.cpp
-        src/game/Game.cpp
-        src/game/GamePhases.cpp
-        src/game/WorldRenderer.cpp
-        src/game/HudRenderer.cpp
-)
+# --- MAIN EXECUTABLE / SHARED LIBRARY ---
+if(ANDROID)
+    add_library(main SHARED
+            src/Audio.cpp
+            src/Voice.cpp
+            src/Setup.cpp
+            src/audio/Announcer.cpp
+            src/game/Game.cpp
+            src/game/GamePhases.cpp
+            src/game/WorldRenderer.cpp
+            src/game/HudRenderer.cpp
+            src/android_main.cpp
+    )
+    target_link_libraries(main PRIVATE log)
+else()
+    add_executable(main
+            src/main.cpp
+            src/Audio.cpp
+            src/Voice.cpp
+            src/Setup.cpp
+            src/audio/Announcer.cpp
+            src/game/Game.cpp
+            src/game/GamePhases.cpp
+            src/game/WorldRenderer.cpp
+            src/game/HudRenderer.cpp
+    )
+endif()
 
 target_include_directories(main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 

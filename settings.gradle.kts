@@ -6,10 +6,13 @@ pluginManagement {
     }
     // ADD THIS BLOCK:
     plugins {
-        id("com.android.application") version "8.1.0" // Use a version compatible with your Android Studio
-        id("com.android.library") version "8.1.0"
-        id("org.jetbrains.kotlin.android") version "1.8.10"
+        id("com.android.application") version "9.4.1" // Use a version compatible with your Android Studio
+        id("com.android.library") version "9.4.1"
+        id("org.jetbrains.kotlin.android") version "2.0.21"
     }
+}
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
 dependencyResolutionManagement {
