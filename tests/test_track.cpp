@@ -2,9 +2,21 @@
 #include <cmath>
 
 #include "Track.h"
+#include "game/TrackGenerator.h"
 
 namespace {
 constexpr float kPi = 3.14159265358979323846f;
+}
+
+TEST_CASE("TrackGenerator alternates two reproducible race tracks", "[track]") {
+    const Track first = TrackGenerator::createForRace(0, 800.0f, 450.0f, 130.0f);
+    const Track second = TrackGenerator::createForRace(1, 800.0f, 450.0f, 130.0f);
+    const Track third = TrackGenerator::createForRace(2, 800.0f, 450.0f, 130.0f);
+    const Track fourth = TrackGenerator::createForRace(3, 800.0f, 450.0f, 130.0f);
+
+    REQUIRE(first.totalLength() != Catch::Approx(second.totalLength()));
+    REQUIRE(first.totalLength() == Catch::Approx(third.totalLength()));
+    REQUIRE(second.totalLength() == Catch::Approx(fourth.totalLength()));
 }
 
 TEST_CASE("Track total length matches two straights plus two semicircles", "[track]") {

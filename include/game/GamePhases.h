@@ -72,6 +72,7 @@ public:
 class FinishedState : public GameState {
 public:
     void onEnter(Game& game) override;
+    void handleEvent(Game& game, const SDL_Event& event) override;
     void update(Game& game, float dt) override;
     void renderOverlay(Game& game) override;
 };

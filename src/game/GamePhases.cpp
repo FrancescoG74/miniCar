@@ -319,11 +319,18 @@ void FinishedState::onEnter(Game& game) {
     game.winnerRect.x = (static_cast<float>(game.windowWidth) - game.winnerRect.w) / 2.0f;
     game.winnerRect.y = (static_cast<float>(game.windowHeight) - game.winnerRect.h) / 2.0f;
 
-    game.winnerHintTexture = game.makeLabelTexture("Press Esc to quit",
+    game.winnerHintTexture = game.makeLabelTexture("Enter: next race    R: race setup    Esc: quit",
                                                     SDL_Color{ 230, 230, 230, 255 },
                                                     game.winnerHintRect);
     game.winnerHintRect.x = (static_cast<float>(game.windowWidth) - game.winnerHintRect.w) / 2.0f;
     game.winnerHintRect.y = game.winnerRect.y + game.winnerRect.h + 16.0f;
+}
+
+void FinishedState::handleEvent(Game& game, const SDL_Event& event) {
+    if (event.type != SDL_EVENT_KEY_DOWN) return;
+    if (event.key.key == SDLK_RETURN || event.key.key == SDLK_KP_ENTER) {
+        game.startRace();
+    }
 }
 
 void FinishedState::update(Game& game, float dt) {
