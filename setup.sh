@@ -1,7 +1,27 @@
 #!/bin/bash
 # Setup script for miniCar development environment (Linux/macOS)
 
-set -e
+set -euo pipefail
+
+run_step() {
+    local description="$1"
+    shift
+    local started_at=$SECONDS
+
+    echo ""
+    echo ">>> $description"
+    printf '    command:'
+    printf ' %q' "$@"
+    echo ""
+
+    if "$@"; then
+        echo "<<< $description completed in $((SECONDS - started_at))s"
+    else
+        local status=$?
+        echo "<<< $description failed after $((SECONDS - started_at))s (exit $status)" >&2
+        return "$status"
+    fi
+}
 
 echo "================================================"
 echo "  miniCar Development Environment Setup"
@@ -110,12 +130,11 @@ if [ -d "build" ]; then
     fi
 fi
 
-echo "Configuring CMake..."
-cmake -S . -B build -G Ninja
+run_step "Configuring CMake" \
+    cmake -S . -B build -G Ninja -DMINICAR_VERBOSE_BUILD=ON
 
-echo ""
-echo "Building miniCar..."
-cmake --build build
+run_step "Building miniCar" \
+    cmake --build build --verbose
 
 echo ""
 echo "✓ Build successful!"
@@ -129,7 +148,8 @@ if cmake --help 2>&1 | grep -q "Catch"; then
     read -p "Run unit tests? (y/n) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        ctest --test-dir build --output-on-failure
+        run_step "Running unit tests" \
+            ctest --test-dir build --output-on-failure --verbose
     fi
 fi
 

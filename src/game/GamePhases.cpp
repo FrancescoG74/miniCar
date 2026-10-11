@@ -11,6 +11,15 @@
 #include "game/Game.h"
 #include "input/KeyboardInput.h"
 
+namespace {
+
+bool pointInRect(float x, float y, const SDL_FRect& rect) {
+    return x >= rect.x && x <= rect.x + rect.w &&
+           y >= rect.y && y <= rect.y + rect.h;
+}
+
+} // namespace
+
 // ==========================================================================
 // MenuState
 // ==========================================================================
@@ -34,6 +43,27 @@ void MenuState::onEnter(Game& game) {
     m_galleryHintTexture = game.makeLabelTexture(
         "Esc: back to race setup",
         SDL_Color{ 200, 200, 200, 255 }, m_galleryHintRect);
+    m_touchTitleTexture = game.makeLabelTexture(
+        "RACE SETUP", SDL_Color{ 255, 255, 255, 255 }, m_touchTitleRect);
+    m_touchPlayersHintTexture = game.makeLabelTexture(
+        "Choose how many people are playing",
+        SDL_Color{ 200, 210, 225, 255 }, m_touchPlayersHintRect);
+    m_touchLapHintTexture = game.makeLabelTexture(
+        "LAPS TO WIN", SDL_Color{ 200, 210, 225, 255 }, m_touchLapHintRect);
+    m_touchStartTexture = game.makeLabelTexture(
+        "START RACE", SDL_Color{ 255, 255, 255, 255 }, m_touchStartRect);
+    constexpr const char* playerChoices[] = { "AI ONLY", "1 PLAYER", "2 PLAYERS" };
+    for (std::size_t i = 0; i < m_touchPlayerTextures.size(); ++i) {
+        m_touchPlayerTextures[i] = game.makeLabelTexture(
+            playerChoices[i], SDL_Color{ 255, 255, 255, 255 }, m_touchPlayerRects[i]);
+    }
+    m_touchMinusTexture = game.makeLabelTexture(
+        "-", SDL_Color{ 255, 255, 255, 255 }, m_touchMinusRect);
+    m_touchPlusTexture = game.makeLabelTexture(
+        "+", SDL_Color{ 255, 255, 255, 255 }, m_touchPlusRect);
+    m_touchLapValueTexture = game.makeLabelTexture(
+        std::to_string(game.raceSetup.laps).c_str(),
+        SDL_Color{ 255, 255, 255, 255 }, m_touchLapValueRect);
 
     for (std::size_t i = 0; i < TrackGenerator::kTrackCount; ++i) {
         const std::string number = i < 9 ? "0" + std::to_string(i + 1)
@@ -120,6 +150,56 @@ void MenuState::backspace(Game& game) {
 }
 
 void MenuState::handleEvent(Game& game, const SDL_Event& event) {
+    const bool touchMenu = game.touchControls.enabled;
+    if (touchMenu && !m_showTrackGallery &&
+        (event.type == SDL_EVENT_FINGER_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)) {
+        float x = event.type == SDL_EVENT_FINGER_DOWN ? event.tfinger.x : event.button.x;
+        float y = event.type == SDL_EVENT_FINGER_DOWN ? event.tfinger.y : event.button.y;
+        const auto width = static_cast<float>(game.windowWidth);
+        const auto height = static_cast<float>(game.windowHeight);
+        const float cardWidth = std::min(width * 0.27f, 340.0f);
+        const float cardGap = std::max(12.0f, width * 0.025f);
+        const float cardsWidth = cardWidth * 3.0f + cardGap * 2.0f;
+        const float cardStartX = (width - cardsWidth) * 0.5f;
+        const float cardY = height * 0.39f;
+        const float cardHeight = std::clamp(height * 0.19f, 104.0f, 160.0f);
+
+        for (int players = 0; players <= 2; ++players) {
+            SDL_FRect card{ cardStartX + static_cast<float>(players) * (cardWidth + cardGap), cardY,
+                            cardWidth, cardHeight };
+            if (pointInRect(x, y, card)) {
+                game.raceSetup.playerCount = players;
+                m_dirty = true;
+                return;
+            }
+        }
+
+        const float controlSize = std::clamp(height * 0.12f, 72.0f, 104.0f);
+        const float controlsY = height * 0.68f;
+        const float centerX = width * 0.5f;
+        SDL_FRect minus{ centerX - controlSize * 1.8f, controlsY,
+                         controlSize, controlSize };
+        SDL_FRect plus{ centerX + controlSize * 0.8f, controlsY,
+                        controlSize, controlSize };
+        if (pointInRect(x, y, minus)) {
+            game.raceSetup.laps = std::max(kMinLaps, game.raceSetup.laps - 1);
+            m_dirty = true;
+            return;
+        }
+        if (pointInRect(x, y, plus)) {
+            game.raceSetup.laps = std::min(kMaxLaps, game.raceSetup.laps + 1);
+            m_dirty = true;
+            return;
+        }
+
+        SDL_FRect start{ width * 0.25f, height * 0.84f, width * 0.5f,
+                         std::clamp(height * 0.11f, 72.0f, 100.0f) };
+        if (pointInRect(x, y, start)) {
+            game.startRace();
+            return;
+        }
+    }
+
     if (event.type == SDL_EVENT_TEXT_INPUT) {
         if (!m_showTrackGallery) appendText(game, event.text.text);
         return;
@@ -200,6 +280,10 @@ void MenuState::rebuildTextures(Game& game) {
                                        : std::string("(AI controlled)")));
 
     buildLine(Field::Laps, "Laps to win: " + std::to_string(game.raceSetup.laps));
+
+    m_touchLapValueTexture = game.makeLabelTexture(
+        std::to_string(game.raceSetup.laps).c_str(),
+        SDL_Color{ 255, 255, 255, 255 }, m_touchLapValueRect);
 }
 
 void MenuState::renderOverlay(Game& game) {
@@ -247,6 +331,83 @@ void MenuState::renderOverlay(Game& game) {
         m_galleryHintRect.x = (static_cast<float>(game.windowWidth) - m_galleryHintRect.w) / 2.0f;
         m_galleryHintRect.y = static_cast<float>(game.windowHeight) - m_galleryHintRect.h - 12.0f;
         SDL_RenderTexture(renderer, m_galleryHintTexture.get(), nullptr, &m_galleryHintRect);
+        return;
+    }
+
+    if (game.touchControls.enabled) {
+        const auto width = static_cast<float>(game.windowWidth);
+        const auto height = static_cast<float>(game.windowHeight);
+        SDL_SetRenderDrawColor(renderer, 24, 28, 36, 255);
+        SDL_FRect panel{ width * 0.08f, height * 0.08f, width * 0.84f, height * 0.84f };
+        SDL_SetRenderDrawColor(renderer, 34, 40, 52, 255);
+        SDL_RenderFillRect(renderer, &panel);
+
+        auto drawCentered = [&](SDL_Texture* texture, const SDL_FRect& naturalRect,
+                                float centerX, float centerY) {
+            if (!texture) return;
+            SDL_FRect rect{ centerX - naturalRect.w * 0.5f,
+                            centerY - naturalRect.h * 0.5f,
+                            naturalRect.w, naturalRect.h };
+            SDL_RenderTexture(renderer, texture, nullptr, &rect);
+        };
+        drawCentered(m_touchTitleTexture.get(), m_touchTitleRect, width * 0.5f, height * 0.18f);
+        drawCentered(m_touchPlayersHintTexture.get(), m_touchPlayersHintRect,
+                     width * 0.5f, height * 0.29f);
+
+        const float cardWidth = std::min(width * 0.27f, 340.0f);
+        const float cardGap = std::max(12.0f, width * 0.025f);
+        const float cardsWidth = cardWidth * 3.0f + cardGap * 2.0f;
+        const float cardStartX = (width - cardsWidth) * 0.5f;
+        const float cardY = height * 0.39f;
+        const float cardHeight = std::clamp(height * 0.19f, 104.0f, 160.0f);
+        for (int players = 0; players <= 2; ++players) {
+            SDL_FRect card{ cardStartX + static_cast<float>(players) * (cardWidth + cardGap), cardY,
+                            cardWidth, cardHeight };
+            const bool selected = game.raceSetup.playerCount == players;
+            SDL_SetRenderDrawColor(renderer, selected ? 45 : 52,
+                                   selected ? 115 : 62, selected ? 190 : 76, 255);
+            SDL_RenderFillRect(renderer, &card);
+            SDL_SetRenderDrawColor(renderer, selected ? 255 : 115,
+                                   selected ? 220 : 125, selected ? 90 : 140, 255);
+            SDL_RenderRect(renderer, &card);
+            drawCentered(m_touchPlayerTextures[players].get(), m_touchPlayerRects[players],
+                         card.x + card.w * 0.5f, card.y + card.h * 0.5f);
+        }
+
+        drawCentered(m_touchLapHintTexture.get(), m_touchLapHintRect,
+                     width * 0.5f, height * 0.63f);
+        const float controlSize = std::clamp(height * 0.12f, 72.0f, 104.0f);
+        const float controlsY = height * 0.68f;
+        const float centerX = width * 0.5f;
+        SDL_FRect minus{ centerX - controlSize * 1.8f, controlsY,
+                         controlSize, controlSize };
+        SDL_FRect plus{ centerX + controlSize * 0.8f, controlsY,
+                        controlSize, controlSize };
+        SDL_FRect lapValue{ centerX - controlSize * 0.5f, controlsY,
+                            controlSize, controlSize };
+        SDL_FRect controls[] = { minus, plus };
+        for (const auto& control : controls) {
+            SDL_SetRenderDrawColor(renderer, 58, 68, 84, 255);
+            SDL_RenderFillRect(renderer, &control);
+            SDL_SetRenderDrawColor(renderer, 150, 165, 185, 255);
+            SDL_RenderRect(renderer, &control);
+        }
+        drawCentered(m_touchMinusTexture.get(), m_touchMinusRect,
+                     minus.x + minus.w * 0.5f, minus.y + minus.h * 0.5f);
+        drawCentered(m_touchLapValueTexture.get(), m_touchLapValueRect,
+                     lapValue.x + lapValue.w * 0.5f, lapValue.y + lapValue.h * 0.5f);
+        drawCentered(m_touchPlusTexture.get(), m_touchPlusRect,
+                     plus.x + plus.w * 0.5f, plus.y + plus.h * 0.5f);
+
+        SDL_FRect start{ width * 0.25f, height * 0.84f, width * 0.5f,
+                         std::clamp(height * 0.11f, 72.0f, 100.0f) };
+        SDL_SetRenderDrawColor(renderer, 35, 150, 82, 255);
+        SDL_RenderFillRect(renderer, &start);
+        SDL_SetRenderDrawColor(renderer, 120, 235, 155, 255);
+        SDL_RenderRect(renderer, &start);
+        drawCentered(m_touchStartTexture.get(), m_touchStartRect,
+                     start.x + start.w * 0.5f, start.y + start.h * 0.5f);
+
         return;
     }
 
@@ -387,12 +548,40 @@ void FinishedState::onEnter(Game& game) {
                                                     game.winnerHintRect);
     game.winnerHintRect.x = (static_cast<float>(game.windowWidth) - game.winnerHintRect.w) / 2.0f;
     game.winnerHintRect.y = game.winnerRect.y + game.winnerRect.h + 16.0f;
+
+    if (game.touchControls.enabled) {
+        m_nextRaceButtonRect = SDL_FRect{
+            static_cast<float>(game.windowWidth) * 0.30f,
+            static_cast<float>(game.windowHeight) * 0.72f,
+            static_cast<float>(game.windowWidth) * 0.40f,
+            std::clamp(static_cast<float>(game.windowHeight) * 0.12f, 96.0f, 120.0f)
+        };
+        m_nextRaceButtonTexture = game.makeLabelTexture(
+            "NEXT RACE", SDL_Color{ 255, 255, 255, 255 }, m_nextRaceButtonTextRect);
+        game.winnerHintTexture = game.makeLabelTexture(
+            "Tap Next Race to play again",
+            SDL_Color{ 230, 230, 230, 255 }, game.winnerHintRect);
+        game.winnerHintRect.x =
+            (static_cast<float>(game.windowWidth) - game.winnerHintRect.w) * 0.5f;
+    }
 }
 
 void FinishedState::handleEvent(Game& game, const SDL_Event& event) {
-    if (event.type != SDL_EVENT_KEY_DOWN) return;
-    if (event.key.key == SDLK_RETURN || event.key.key == SDLK_KP_ENTER) {
+    if (event.type == SDL_EVENT_KEY_DOWN &&
+        (event.key.key == SDLK_RETURN || event.key.key == SDLK_KP_ENTER)) {
         game.startRace();
+        return;
+    }
+
+    if (game.touchControls.enabled &&
+        (event.type == SDL_EVENT_FINGER_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)) {
+        const float x = event.type == SDL_EVENT_FINGER_DOWN ? event.tfinger.x : event.button.x;
+        const float y = event.type == SDL_EVENT_FINGER_DOWN ? event.tfinger.y : event.button.y;
+        const bool inside = x >= m_nextRaceButtonRect.x &&
+                            x <= m_nextRaceButtonRect.x + m_nextRaceButtonRect.w &&
+                            y >= m_nextRaceButtonRect.y &&
+                            y <= m_nextRaceButtonRect.y + m_nextRaceButtonRect.h;
+        if (inside) game.startRace();
     }
 }
 
@@ -422,5 +611,20 @@ void FinishedState::renderOverlay(Game& game) {
     }
     if (game.winnerHintTexture) {
         SDL_RenderTexture(renderer, game.winnerHintTexture.get(), nullptr, &game.winnerHintRect);
+    }
+    if (game.touchControls.enabled) {
+        SDL_SetRenderDrawColor(renderer, 35, 150, 82, 255);
+        SDL_RenderFillRect(renderer, &m_nextRaceButtonRect);
+        SDL_SetRenderDrawColor(renderer, 120, 235, 155, 255);
+        SDL_RenderRect(renderer, &m_nextRaceButtonRect);
+        if (m_nextRaceButtonTexture) {
+            SDL_FRect textRect{
+                m_nextRaceButtonRect.x + (m_nextRaceButtonRect.w - m_nextRaceButtonTextRect.w) * 0.5f,
+                m_nextRaceButtonRect.y + (m_nextRaceButtonRect.h - m_nextRaceButtonTextRect.h) * 0.5f,
+                m_nextRaceButtonTextRect.w,
+                m_nextRaceButtonTextRect.h
+            };
+            SDL_RenderTexture(renderer, m_nextRaceButtonTexture.get(), nullptr, &textRect);
+        }
     }
 }

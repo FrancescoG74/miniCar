@@ -8,8 +8,17 @@ This project supports building for both desktop platforms (Linux, macOS, Windows
 
 ```bash
 cmake -S . -B build -G Ninja
-cmake --build build
+# Add --verbose to show every compiler and linker command.
+cmake --build build --verbose
 ./build/minicar
+```
+
+For a fully traceable desktop configure/build/test run:
+
+```bash
+cmake -S . -B build -G Ninja -DMINICAR_VERBOSE_BUILD=ON
+cmake --build build --verbose
+ctest --test-dir build --output-on-failure --verbose
 ```
 
 ### Android Build (Android Studio)
@@ -89,14 +98,18 @@ cmake --build build
 
 ```bash
 # Debug build
-./gradlew assembleDebug
+./gradlew assembleDebug --console=plain --info --stacktrace
 
 # Release build
-./gradlew assembleRelease
+./gradlew assembleRelease --console=plain --info --stacktrace
 
 # Install on connected device
-./gradlew installDebug
+./gradlew installDebug --console=plain --info --stacktrace
 ```
+
+The `setup.sh` and `setup.bat` scripts use the same verbose CMake and CTest
+options and print each command before running it, including its completion
+status and elapsed time.
 
 ## VSCode Configuration
 
