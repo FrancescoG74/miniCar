@@ -106,9 +106,11 @@ REM Check if vcpkg toolchain is available
 if exist "%cd%\..\vcpkg\scripts\buildsystems\vcpkg.cmake" (
     set VCPKG_TOOLCHAIN="..\vcpkg\scripts\buildsystems\vcpkg.cmake"
     echo Using vcpkg toolchain: !VCPKG_TOOLCHAIN!
-    cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=!VCPKG_TOOLCHAIN!
+    echo ^> cmake -S . -B build -G Ninja -DMINICAR_VERBOSE_BUILD=ON -DCMAKE_TOOLCHAIN_FILE=!VCPKG_TOOLCHAIN!
+    cmake -S . -B build -G Ninja -DMINICAR_VERBOSE_BUILD=ON -DCMAKE_TOOLCHAIN_FILE=!VCPKG_TOOLCHAIN!
 ) else (
-    cmake -S . -B build -G Ninja
+    echo ^> cmake -S . -B build -G Ninja -DMINICAR_VERBOSE_BUILD=ON
+    cmake -S . -B build -G Ninja -DMINICAR_VERBOSE_BUILD=ON
 )
 
 if errorlevel 1 (
@@ -119,7 +121,8 @@ if errorlevel 1 (
 
 echo.
 echo Building miniCar...
-cmake --build build
+echo ^> cmake --build build --verbose
+cmake --build build --verbose
 
 if errorlevel 1 (
     echo ❌ Build failed
@@ -136,7 +139,9 @@ echo.
 
 set /p RUN_TESTS="Run unit tests? (y/n): "
 if /i "%RUN_TESTS%"=="y" (
-    ctest --test-dir build --output-on-failure
+    echo.
+    echo ^> ctest --test-dir build --output-on-failure --verbose
+    ctest --test-dir build --output-on-failure --verbose
 )
 
 echo.

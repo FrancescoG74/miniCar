@@ -15,10 +15,10 @@ extern "C" int SDL_main(int /*argc*/, char* /*argv*/[]) {
     try {
         Game game;
 
-        // On Android, use fullscreen dimensions
-        // These can be adjusted based on device capabilities
-        int windowWidth = 1280;
-        int windowHeight = 720;
+        // Use the game's 16:9 design canvas so the world and menus share a
+        // consistent center; SDL scales this logical size to the device.
+        int windowWidth = 1600;
+        int windowHeight = 900;
 
         if (!game.init(windowWidth, windowHeight, "miniCar")) {
             LOGE("Failed to initialize game");

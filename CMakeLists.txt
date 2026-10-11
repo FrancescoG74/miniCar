@@ -6,6 +6,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(MINICAR_BUILD_TESTS "Build the miniCar unit test suite" ON)
 option(MINICAR_ENABLE_WARNINGS "Enable compiler warnings" ON)
+option(MINICAR_VERBOSE_BUILD "Show full compiler and linker commands" OFF)
+
+if(MINICAR_VERBOSE_BUILD)
+    set(CMAKE_VERBOSE_MAKEFILE ON)
+endif()
+
+message(STATUS "miniCar build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "miniCar verbose build: ${MINICAR_VERBOSE_BUILD}")
+message(STATUS "miniCar tests: ${MINICAR_BUILD_TESTS}")
 
 # --- HELPER FUNCTION ---
 function(minicar_configure_quality target)

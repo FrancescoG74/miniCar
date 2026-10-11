@@ -52,6 +52,22 @@ private:
     SDL_FRect m_galleryTitleRect{ 0, 0, 0, 0 };
     SDL_TexturePtr m_galleryHintTexture;
     SDL_FRect m_galleryHintRect{ 0, 0, 0, 0 };
+    SDL_TexturePtr m_touchTitleTexture;
+    SDL_TexturePtr m_touchPlayersHintTexture;
+    SDL_TexturePtr m_touchLapHintTexture;
+    SDL_TexturePtr m_touchStartTexture;
+    std::array<SDL_TexturePtr, 3> m_touchPlayerTextures;
+    SDL_TexturePtr m_touchMinusTexture;
+    SDL_TexturePtr m_touchPlusTexture;
+    SDL_TexturePtr m_touchLapValueTexture;
+    SDL_FRect m_touchTitleRect{ 0, 0, 0, 0 };
+    SDL_FRect m_touchPlayersHintRect{ 0, 0, 0, 0 };
+    SDL_FRect m_touchLapHintRect{ 0, 0, 0, 0 };
+    SDL_FRect m_touchStartRect{ 0, 0, 0, 0 };
+    std::array<SDL_FRect, 3> m_touchPlayerRects{};
+    SDL_FRect m_touchMinusRect{ 0, 0, 0, 0 };
+    SDL_FRect m_touchPlusRect{ 0, 0, 0, 0 };
+    SDL_FRect m_touchLapValueRect{ 0, 0, 0, 0 };
     std::array<SDL_TexturePtr, TrackGenerator::kTrackCount> m_trackLabels;
     std::array<SDL_FRect, TrackGenerator::kTrackCount> m_trackLabelRects{};
     bool m_showTrackGallery = false;
@@ -84,4 +100,9 @@ public:
     void handleEvent(Game& game, const SDL_Event& event) override;
     void update(Game& game, float dt) override;
     void renderOverlay(Game& game) override;
+
+private:
+    SDL_TexturePtr m_nextRaceButtonTexture;
+    SDL_FRect m_nextRaceButtonRect{ 0, 0, 0, 0 };
+    SDL_FRect m_nextRaceButtonTextRect{ 0, 0, 0, 0 };
 };

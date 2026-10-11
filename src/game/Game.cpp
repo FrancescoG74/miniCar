@@ -230,7 +230,12 @@ void Game::pollEvents() {
             event.type == SDL_EVENT_FINGER_UP || event.type == SDL_EVENT_FINGER_CANCELED) {
             SDL_Event converted = event;
             SDL_ConvertEventToRenderCoordinates(app.renderer, &converted);
-            touchControls.handleEvent(converted);
+            if (m_state && m_state->rendersWorld()) {
+                touchControls.handleEvent(converted);
+            }
+            event = converted;
+        } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+            SDL_ConvertEventToRenderCoordinates(app.renderer, &event);
         }
 
         if (event.type == SDL_EVENT_KEY_DOWN && !(m_state && m_state->ownsInput())) {
