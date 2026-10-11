@@ -10,6 +10,7 @@
 
 #include "game/GamePhases.h"
 #include "game/GameState.h"
+#include "game/TrackGenerator.h"
 #include "game/WorldRenderer.h"
 
 namespace {
@@ -113,6 +114,10 @@ void Game::startRace() {
     winnerTexture.reset();
     winnerHintTexture.reset();
     countdownTexture.reset();
+
+    *track = TrackGenerator::createForRace(m_nextRaceNumber++, kTrackCenterX, kTrackCenterY,
+                                           kTrackWidth);
+    startLine = std::make_unique<StartLine>(*track, kTrackWidth);
 
     m_raceTuning.lapsToWin = std::clamp(raceSetup.laps, 1, 99);
     m_race->setLapsToWin(m_raceTuning.lapsToWin);

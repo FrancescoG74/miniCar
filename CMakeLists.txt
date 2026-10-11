@@ -63,6 +63,7 @@ add_library(minicar_core STATIC
         src/game/DriverAssignmentService.cpp
         src/game/RaceBuilder.cpp
         src/game/RaceSession.cpp
+        src/game/TrackGenerator.cpp
 )
 
 target_include_directories(minicar_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -105,6 +106,7 @@ else()
             src/game/HudRenderer.cpp
             src/game/TouchControls.cpp
     )
+    set_target_properties(main PROPERTIES OUTPUT_NAME miniCar)
 endif()
 
 target_include_directories(main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -147,6 +147,7 @@ private:
 
     RaceTuning m_raceTuning;
     AiTuning m_aiTuning;
+    std::size_t m_nextRaceNumber = 0;
     std::unique_ptr<RaceSession> m_race;
     std::unique_ptr<GameState> m_state;
     std::unique_ptr<GameState> m_pendingState;

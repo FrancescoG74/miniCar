@@ -20,13 +20,28 @@ void MenuState::onEnter(Game& game) {
     m_focus = Field::Players;
     m_dirty = true;
     m_lapsFresh = true;
+    m_showTrackGallery = false;
 
     m_titleTexture = game.makeLabelTexture("miniCar - Race Setup",
                                             SDL_Color{ 255, 255, 255, 255 }, m_titleRect);
     m_instructionsTexture = game.makeLabelTexture(
         "Up/Down: select field    Left/Right or digits: change laps/players    "
-        "Type: edit name    Enter: start    Esc: quit",
+        "Type: edit name    T: tracks    Enter: start    Esc: quit",
         SDL_Color{ 200, 200, 200, 255 }, m_instructionsRect);
+    m_galleryTitleTexture = game.makeLabelTexture(
+        "Track Gallery - Races cycle through these ten layouts",
+        SDL_Color{ 255, 255, 255, 255 }, m_galleryTitleRect);
+    m_galleryHintTexture = game.makeLabelTexture(
+        "Esc: back to race setup",
+        SDL_Color{ 200, 200, 200, 255 }, m_galleryHintRect);
+
+    for (std::size_t i = 0; i < TrackGenerator::kTrackCount; ++i) {
+        const std::string number = i < 9 ? "0" + std::to_string(i + 1)
+                                         : std::to_string(i + 1);
+        const std::string label = number + "  " + TrackGenerator::typeAt(i).name;
+        m_trackLabels[i] = game.makeLabelTexture(
+            label.c_str(), SDL_Color{ 230, 230, 230, 255 }, m_trackLabelRects[i]);
+    }
 }
 
 void MenuState::onExit(Game& game) {
@@ -106,7 +121,7 @@ void MenuState::backspace(Game& game) {
 
 void MenuState::handleEvent(Game& game, const SDL_Event& event) {
     if (event.type == SDL_EVENT_TEXT_INPUT) {
-        appendText(game, event.text.text);
+        if (!m_showTrackGallery) appendText(game, event.text.text);
         return;
     }
     if (event.type != SDL_EVENT_KEY_DOWN) return;
@@ -114,7 +129,14 @@ void MenuState::handleEvent(Game& game, const SDL_Event& event) {
     switch (event.key.key) {
     case SDLK_ESCAPE:
     case SDLK_AC_BACK: // Android back button/gesture
-        game.quit();
+        if (m_showTrackGallery) {
+            m_showTrackGallery = false;
+        } else {
+            game.quit();
+        }
+        break;
+    case SDLK_T:
+        m_showTrackGallery = true;
         break;
     case SDLK_UP:
         moveFocus(game, -1);
@@ -186,6 +208,47 @@ void MenuState::renderOverlay(Game& game) {
     SDL_FRect full{ 0, 0, static_cast<float>(game.windowWidth), static_cast<float>(game.windowHeight) };
     SDL_SetRenderDrawColor(renderer, 24, 28, 36, 255);
     SDL_RenderFillRect(renderer, &full);
+
+    if (m_showTrackGallery) {
+        m_galleryTitleRect.x = (static_cast<float>(game.windowWidth) - m_galleryTitleRect.w) / 2.0f;
+        m_galleryTitleRect.y = 24.0f;
+        SDL_RenderTexture(renderer, m_galleryTitleTexture.get(), nullptr, &m_galleryTitleRect);
+
+        const float cellWidth = static_cast<float>(game.windowWidth) / 5.0f;
+        const float galleryTop = 72.0f;
+        const float galleryBottom = 48.0f;
+        const float rowHeight = (static_cast<float>(game.windowHeight) - galleryTop - galleryBottom) / 2.0f;
+
+        for (std::size_t i = 0; i < TrackGenerator::kTrackCount; ++i) {
+            const auto& type = TrackGenerator::typeAt(i);
+            const float trackWidth = Game::kTrackWidth;
+            const float radialExtent = 1.0f + std::abs(type.lobeA) +
+                                       std::abs(type.lobeB) + std::abs(type.lobeC);
+            const float scaleX = cellWidth * 0.68f /
+                (2.0f * type.radiusX * radialExtent + trackWidth);
+            const float scaleY = rowHeight * 0.44f /
+                (2.0f * type.radiusY * radialExtent + trackWidth);
+            const float scale = std::min(scaleX, scaleY);
+            const int column = static_cast<int>(i % 5);
+            const int row = static_cast<int>(i / 5);
+            const float centerX = cellWidth * (static_cast<float>(column) + 0.5f);
+            const float rowTop = galleryTop + rowHeight * static_cast<float>(row);
+            const float centerY = rowTop + rowHeight * 0.43f;
+
+            Track preview = TrackGenerator::createPreview(i, centerX, centerY, trackWidth, scale);
+            preview.render(renderer);
+
+            SDL_FRect& labelRect = m_trackLabelRects[i];
+            labelRect.x = centerX - labelRect.w / 2.0f;
+            labelRect.y = rowTop + rowHeight * 0.79f;
+            SDL_RenderTexture(renderer, m_trackLabels[i].get(), nullptr, &labelRect);
+        }
+
+        m_galleryHintRect.x = (static_cast<float>(game.windowWidth) - m_galleryHintRect.w) / 2.0f;
+        m_galleryHintRect.y = static_cast<float>(game.windowHeight) - m_galleryHintRect.h - 12.0f;
+        SDL_RenderTexture(renderer, m_galleryHintTexture.get(), nullptr, &m_galleryHintRect);
+        return;
+    }
 
     auto drawCentered = [&](SDL_Texture* texture, SDL_FRect& rect, int lineY) {
         if (!texture) return;
@@ -319,11 +382,18 @@ void FinishedState::onEnter(Game& game) {
     game.winnerRect.x = (static_cast<float>(game.windowWidth) - game.winnerRect.w) / 2.0f;
     game.winnerRect.y = (static_cast<float>(game.windowHeight) - game.winnerRect.h) / 2.0f;
 
-    game.winnerHintTexture = game.makeLabelTexture("Press Esc to quit",
+    game.winnerHintTexture = game.makeLabelTexture("Enter: next race    R: race setup    Esc: quit",
                                                     SDL_Color{ 230, 230, 230, 255 },
                                                     game.winnerHintRect);
     game.winnerHintRect.x = (static_cast<float>(game.windowWidth) - game.winnerHintRect.w) / 2.0f;
     game.winnerHintRect.y = game.winnerRect.y + game.winnerRect.h + 16.0f;
+}
+
+void FinishedState::handleEvent(Game& game, const SDL_Event& event) {
+    if (event.type != SDL_EVENT_KEY_DOWN) return;
+    if (event.key.key == SDLK_RETURN || event.key.key == SDLK_KP_ENTER) {
+        game.startRace();
+    }
 }
 
 void FinishedState::update(Game& game, float dt) {
